@@ -1,0 +1,26 @@
+{
+  "name": "socialhub",
+  "version": "1.0.0",
+  "description": "Igniting crackers in diwali using arduino ",
+  "main": "server.js",
+  "scripts": {
+    "test": "node server.js",
+    "start": "node server.js"
+  },
+  "author": "bikrant bikram",
+  "license": "ISC",
+  "keywords": [
+    "social",
+    "Media",
+    "FCS",
+    "Security",
+    "Chat",
+    "Application"
+  ],
+  "dependencies": {
+    "ejs": "^3.1.10",
+    "express": "^4.21.2",
+    "node": "^18.20.6",
+    "path": "^0.12.7"
+  }
+}
