@@ -1,8 +1,20 @@
+
+@font-face {
+    font-family: 'KenokyLight';
+    src: url('../fonts/Wagon-Bold.otf');
+}
+
+
+
 *{
     margin: 0;
     padding: 0;
     box-sizing: border-box;
+    color:#31473A ;
+
 }
+
+
 
 html, body {
     width: 100%;
@@ -40,11 +52,11 @@ html, body {
 .nav-item a{
     text-decoration: none;
     color: #000;
-   font-family: "Neue Montreal";
+   font-family: "PP Neue Montreal";
 }
 
 .nav-logo a {
-    font-family: "Voyage";
+    font-family: "KenokyLight";
     font-size: 20px;
     font-weight: 600;
 }
@@ -85,13 +97,14 @@ html, body {
     padding: 4em 0;
 }
 h1 {
-    font-family: "Voyage";
+    font-family: "KenokyLight";
+    color: #31473A;
     font-weight: 500;
     font-size: 5vw;
 }
 
 .cta button{
-    background: #000;
+    background: #31473A;
     color: white;
     border: none;
     outline: none;
@@ -103,7 +116,7 @@ h1 {
 
 p{
     margin: 4em 0 0 0;
-    font-family: "Neue Montreal";
+    font-family: "PP Neue Montreal";
     font-size: 14px;
 }
 
