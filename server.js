@@ -7,6 +7,17 @@ const app = express();
 
 const  PORT = 8080;
 
+
+
+app.set('view engine', 'ejs');
+app.use(express.static(__dirname + '/public'));
+app.use(express.json());
+
+
+
+
+
+
 // setting up some handels
 
 app.set('view engine', 'ejs');
@@ -18,7 +29,13 @@ app.get('/', (req, res, next) => {
     res.render('index');
 });
 
+app.get('/search', (req, res, next) => {
+    res.render('search');
+});
 
+app.get('/chat', (req, res, next) => {
+    res.render('chat');
+});
   
 
 

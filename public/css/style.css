@@ -19,15 +19,18 @@
 html, body {
     width: 100%;
     height: 100vh;
-    background: #e9e1c5;
-    overflow: hidden;
+    background-color: #f9f9f9;
+    /* overflow: hidden; */
 }
 
 .nav-container {
     width: 100%;
     position: relative;
+    z-index: top;
+    
 }
 .nav{
+    z-index: top;
     width: 95%;
     margin: 0 auto;
     padding: 2em 0;
@@ -53,7 +56,9 @@ html, body {
     text-decoration: none;
     color: #000;
    font-family: "PP Neue Montreal";
+    cursor:pointer ;
 }
+
 
 .nav-logo a {
     font-family: "KenokyLight";
@@ -155,7 +160,7 @@ bg-gradient {
     left: 5%;
     width: 400px;
     height: 400px;
-    background: url(../images/1.jpeg) no-repeat 50% 50%;
+    background: url(../images/1.jpg) no-repeat 50% 50%;
     background-size: cover;
 
 }
@@ -166,7 +171,7 @@ bg-gradient {
     right: 10%;
     width: 160px;
     height: 160px;
-    background: url(../images/2.jpeg) no-repeat 50% 50%;
+    background: url(../images/2.jpg) no-repeat 50% 50%;
     background-size: cover;
     animation-delay: 1s;
 
@@ -182,3 +187,62 @@ bg-gradient {
     animation-delay:2s;
 }
 
+
+
+
+.nav-container {
+    width: 100%;
+    position: relative;
+    z-index: 1; /* Fixed */
+}
+
+.nav {
+    z-index: 1; /* Fixed */
+    width: 95%;
+    margin: 0 auto;
+    padding: 2em 0;
+    display: flex;
+    border-bottom: 1px solid #000;
+}
+
+.nav-item a {
+    text-decoration: none;
+    color: #000;
+    font-family: "PP Neue Montreal";
+    cursor: pointer;
+}
+
+a:hover {
+    /* background-color: yellow; */
+    font-size: 18px;
+    color: black; /* Explicitly set */
+}
+
+.nav-item a {
+    text-decoration: none;
+    color: #000;
+    font-family: "PP Neue Montreal";
+    cursor: pointer;
+    position: relative; /* Required for pseudo-elements */
+    transition: color 0.3s ease-in-out; /* Smooth color change */
+}
+
+.nav-item a:hover {
+    color: #31473A; /* Change the text color */
+}
+
+/* Add a modern underline effect */
+.nav-item a::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: -4px; /* Adjust spacing between text and underline */
+    width: 0%;
+    height: 2px; /* Thickness of the underline */
+    background-color: #31473A; /* Underline color */
+    transition: width 0.3s ease-in-out; /* Smooth underline animation */
+}
+
+.nav-item a:hover::after {
+    width: 100%; /* Animate underline to full width */
+}
