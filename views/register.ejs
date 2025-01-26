@@ -1,0 +1,78 @@
+
+
+
+
+<%- include('parcials/before_import') %>
+<link rel="stylesheet" href="/css/search.css" />
+
+<!-- locomotive-scroll -->
+<link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/locomotive-scroll@3.2.5/dist/locomotive-scroll.min.css"
+/>
+<link rel="stylesheet" href="css/login.css">
+
+<script src="https://cdn.jsdelivr.net/npm/locomotive-scroll@3.2.5/dist/locomotive-scroll.min.js"></script>
+<%- include('parcials/after_import') %>
+
+<%- include('parcials/nav') %>
+
+
+
+<div class="margin-top-1">
+    <div class="box-form ">
+        <div class="left">
+            <div class="overlay">
+            <h1>Hello There.</h1>
+            <p>It will take onely few seconds of your precious time for registration.</p>
+            <span>
+                <p>Our social media</p>
+                <a href="http://instagram.com/bikrant_bikram/"><i class="fa fa-facebook" aria-hidden="true"></i>instagram</a>
+                <a href="http://instagram.com/bikrant_bikram/"><i class="fa fa-twitter" aria-hidden="true"></i> Twitter</a>
+            </span>
+            </div>
+        </div>
+        
+        
+            <div class="right">
+            <!-- <h5>Login</h5> -->
+            <p>Already a memeber <a onclick="login_get()">Login</a> here.</p>
+            <form action="/register" method="post">
+            <div class="inputs">
+                    <input type="text" name="username" id="username" placeholder="User Name" required>
+                
+                   <input type="text" name="name" id="name" placeholder="Name" required>
+                   <input type="text" name="contact_number" id="contact_number" placeholder="Contact Number" required>
+                   <input type="password" name="password" id="password" placeholder="Password" required>
+                   <input type="password" name="password" id="password" placeholder="Confirm Password" required>
+                   <input type="file" name="profile-photo" id="profile-photo">
+                    <input type="email" name="email" id="email" placeholder="example@gmail.com" required>
+                    <input type="text" name="bio" id="bio" placeholder="Bio" required>
+
+            </div>
+                
+                <br><br>
+                
+            <div class="remember-me--forget-password">
+                    <!-- Angular -->
+        <!-- <label> -->
+            <!-- <input type="checkbox" name="item" checked/> -->
+            <!-- <span class="text-checkbox">Remember me</span> -->
+        <!-- </label> -->
+                <p>forget password?</p>
+            </div>
+                
+                <br>
+                <button  type="submit"> Register</button>
+                
+            </form>
+        </div>
+        
+    </div>
+</div>
+<div class="margin-top-1"></div>
+
+
+
+
+
