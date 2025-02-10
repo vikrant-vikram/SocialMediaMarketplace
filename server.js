@@ -5,11 +5,32 @@ const path = require('path');
 const express = require('express');
 const app = express();
 const stripe = require("stripe")(process.env.STRIPE_PRIVATE_KEY);
-const User = require("./models/users");
+const bcrypt = require('bcrypt');
+
+
+// import all Models from "./models";
+const AdminActionLog = require("./models/adminActionLog");
+const AuditLog = require("./models/auditLog");
+const Friendship = require("./models/friendship");
+const Group = require("./models/group");
+const GroupMember = require("./models/groupMember");
+const Marketplace = require("./models/marketplaceListing");
+const Media = require("./models/media");
+const Message = require("./models/message");
+const Report = require("./models/report");
+const Transaction = require("./models/transaction");
+const Users = require("./models/users");
+
+
+
+
+
+
 var cookieParser = require('cookie-parser');
 const body= require("body-parser");
 let fs = require('fs');
 const mongoose=require("mongoose");
+const { Hash } = require("crypto");
 // const { $where } = require("./models/users");
 
 
@@ -24,7 +45,7 @@ const DBSERVER=process.env.MONGOOSE_DBSERVER;
 
 
 mongoose.connect(DBSERVER, {useNewUrlParser: true,useUnifiedTopology: true}).then(data=>{
-    console.log("connected");
+    console.log("COnnected To Mongoose Database");
 }).catch(err=>{
     console.log(err);
 });
@@ -92,33 +113,92 @@ app.use(express.static(__dirname + '/public'));
 app.use(express.json());
 
 
+app.set('view engine', 'ejs');
+app.use(express.static(__dirname + '/public'));
+
+
 
 
 
 
 // setting up some handels
 
-app.set('view engine', 'ejs');
-app.use(express.static(__dirname + '/public'));
 
+// ================================================ Get Request ===================================================================================================
 
+app.get('/', isLoggedIn, (req, res, next) => {
+    res.render("profile")
 
-app.get('/', (req, res, next) => {
-    res.render('index');
 });
 
-app.get('/search', (req, res, next) => {
+app.get('/search', isLoggedIn, (req, res, next) => {
     res.render('search');
 });
 
-app.get('/chat', (req, res, next) => {
+
+app.get('/chat',isLoggedIn, async (req, res, next) => {
     res.render('chat');
 });
   
+  
+app.get("/profile",isLoggedIn,function (req, res) {
+    res.render("profile");
+
+});
+
+app.get("/marketplace",isLoggedIn,function (req, res) {
+    res.render("marketplace");
+
+});
+
+app.get("/explore",isLoggedIn,function (req, res) {
+    res.render("explore");
+
+});
+
+app.get("/upload",isLoggedIn,function (req, res) {
+    res.render("upload");
+
+});
+
+
+app.get("/register", function( req,res) {
+    if(req.session.user){
+        res.render("profile")
+    }
+
+    res.render("register");
+
+});
+
+app.get("/logout",isLoggedIn,function (req, res) {
+
+    req.session.destroy();
+    res.render("login");
+
+});
+
+
+
+app.get("/login" , function (req, res) {
+    if(req.session.user){
+        res.render("profile")
+    }
+    console.log("/login-page accerss")
+    res.render("login");
+    
+});
+
+
+
+app.get("*", function (req, res) {
+    res.render("bazinga");
+});
 
 
 
 
+// ================================================================ Post Request ===================================================================================================
 
 
 
@@ -156,60 +236,34 @@ app.post('/purchase',isLoggedIn, async (req, res, next) => {
 
 
 
-  
-app.get("/profile",isLoggedIn,function (req, res) {
-    res.render("profile");
-
-});
-
-
-
-app.get("/register", function( req,res) {
-    if(req.session.user){
-        res.render("purchase")
-    }
-
-    res.render("register");
-
-});
-
-app.get("/logout",isLoggedIn,function (req, res) {
-
-    req.session.destroy();
-    res.render("login");
-
-});
 
 app.post("/register", formVailidation, async function( req,res) {
+    
+
+    // Have Not implemented the Hashing of password yet
 
     if(req.session.user){
-        res.render("purchase")
+        res.render("profile")
     }
+
+    const passwordHash = await createHash(req.body.password); 
 
     const user={
-
-    name:req.body.name,
-    email:req.body.email ,
-    password:req.body.password ,
-    pan_number:req.body.pan_number,
-    contact_number:req.body.contact_number,
-    subscription_type:"0",
-    business_name:req.body.business_name,
-    business_webiste:req.body.business_webiste,
-    msg_left:"100",
-    active:"False",
-    Other:"Contact Verification required",
-
-
+        username:req.body.username,
+        name:req.body.name,
+        email:req.body.email,
+        mobile_number:req.body.mobile_number,
+        password_hash:passwordHash,
+        profile_picture_url:req.body.profile
     }
             
-    console.log(req.body.name);
+    // console.log(req.body.name);
     console.log(user);
-    await User.findOne({contact_number:"req.body.contact_number"}).then(found=>{
+    await Users.findOne({contact_number:"req.body.contact_number"}).then(found=>{
         if(found)
         res.send("Contact is alreaady in Use");
         else{
-            User.create(user).then(user=>{
+            Users.create(user).then(user=>{
         
 
                 console.log(user);
@@ -221,6 +275,7 @@ app.post("/register", formVailidation, async function( req,res) {
             });
         }
     }).catch(err=>{
+        console.log(err);
         res.render("register");
     });    
         
@@ -233,61 +288,52 @@ app.post("/register", formVailidation, async function( req,res) {
 
 
 
-app.post("/login", async function( req,res) {
-    if(req.session.user){
-        res.render("purchase")
+app.post("/login", async function(req, res) {
+    if (req.session.user) {
+        return res.render("profile");
     }
 
-    var user=
-    {
-        contact_number:req.body.contact_number,
-        password:req.body.password
-    }
+    try {
+        // Find user by mobile number
+        const user = await Users.findOne({ mobile_number: req.body.mobile_number });
 
-    console.log(user);
-    console.log(req.body);
+        if (!user) {
+            console.log("No user found with this mobile number");
+            return res.render("login");
+        }
 
-    await User.findOne(user).then(usr=>{
-        if(usr)
-        {
-            console.log("congrates");
-            console.log(usr);
-            req.session.user=usr;
-            res.render("index");
+        // Compare provided password with stored hash
+        const isMatch = await bcrypt.compare(req.body.password, user.password_hash);
+        if (!isMatch) {
+            console.log("Incorrect password");
+            return res.render("login");
         }
-        if(!usr)
-        {
-            console.log(usr)
-            console.log("No user found with this credentials")
-            res.render("login");
-        }
-    }).catch(err=>{
-        console.log(err);
+
+        console.log("User authenticated");
+        req.session.user = user;
+        res.render("profile");
+
+    } catch (err) {
+        console.error("Login Error:", err);
         res.render("login");
-
-    });
-
-});
-
-app.get("/login" , function (req, res) {
-    if(req.session.user){
-        res.render("purchase")
     }
-    console.log("/login-page accerss")
-    res.render("login");
-    
-});
-
-
-
-app.get("*", function (req, res) {
-    res.render("bazinga");
 });
 
 
 
 
 
+
+
+
+
+
+
+
+
+
+
+// ================================================================ Handler Functions ===================================================================================================
 
 
 app.listen(PORT, () => {
@@ -304,7 +350,7 @@ app.listen(PORT, () => {
 
 
 function formVailidation(req,res,next){
-
+    return next();
     usersname=req.body.name
     email=req.body.email
     password=req.body.password
@@ -415,21 +461,6 @@ function passwordVailidation(password){
 
 }
 
-function panVailidation(pan){
-    const panRegex = /[A-Z]{5}[0-9]{4}[A-Z]{1}/;
-    if(panRegex.test(pan))
-    {
-        
-        return true;
-    }
-    else
-    {
-        console.log("pan verification failed")
-        return false;
-    }
-
-}
-
 function contactVailidation(contact){
     const contactRegex = /[1-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]/;
 
@@ -464,3 +495,13 @@ function websiteVailidation(website){
 
 
 
+
+
+
+async function createHash(password) {
+    const saltRounds = 10;
+    password_hash = await bcrypt.hash(password, saltRounds);
+    console.log("Hashing have been done")
+    return password_hash;
+
+}
