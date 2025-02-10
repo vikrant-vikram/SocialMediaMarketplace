@@ -246,3 +246,82 @@ a:hover {
 .nav-item a:hover::after {
     width: 100%; /* Animate underline to full width */
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.media-container {
+    flex: 1;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+
+
+#content {
+    flex-grow: 1;
+    padding-bottom: 80px; /* Space for the sticky media scroll */
+}
+
+.media-scroll {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: scroll;
+    gap: 20px;
+    padding: 10px 0;
+    width: 100%;
+    margin-bottom: 0;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    background-color: white;
+    border-top: 2px solid #ddd;
+    -webkit-overflow-scrolling: touch; /* Smooth scrolling on mobile */
+    z-index: 10;
+}
+
+.media-item {
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    width: 250px;
+    flex-shrink: 0;
+    position: relative;
+}
+
+.media-image, .media-video, .media-audio {
+    width: 100%;
+    height: auto;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.media-info {
+    font-size: 0.9rem;
+    color: #777;
+    padding: 10px;
+    text-align: center;
+}
+
+#loading {
+    margin-top: 20px;
+    font-size: 1.2rem;
+    color: #666;
+    text-align: center;
+}

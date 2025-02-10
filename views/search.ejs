@@ -7,7 +7,7 @@
 			href="https://cdn.jsdelivr.net/npm/locomotive-scroll@3.2.5/dist/locomotive-scroll.min.css"
 		/>
 		<script src="https://cdn.jsdelivr.net/npm/locomotive-scroll@3.2.5/dist/locomotive-scroll.min.js"></script>
-        <%- include('parcials/after_import') %>
+<%- include('parcials/after_import') %>
 	<body id="js-scroll">
 		<div class="wrapper">
 			<div class="container">
@@ -16,9 +16,19 @@
 
 				<!-- navbar -->
                 <%- include('parcials/nav') %>
+                <!-- navbar -->
 
-
-
+				<div class='search_con'>
+					<form action="/search" method="get" class="input_con">
+					  <input type="text" placeholder='Search for Query...' spellCheck="False" id="queryFind"/>
+					  <span id="clearBtn"><i class="bi bi-x-lg"></i></span>
+					  <span class='h-line'></span>
+					  <a href="https://t.me/rawnge" target="_blank">
+					  <span><i class="bi bi-search"></i></span>
+						</a>
+					</form>
+				  </div>
+				  
 
 				<div class="divider"></div>
 

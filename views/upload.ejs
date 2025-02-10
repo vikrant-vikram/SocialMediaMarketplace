@@ -1,1 +1,49 @@
-<h1>Upload</h1>
+<%- include('parcials/before_import') %>
+<link rel="stylesheet" href="/css/search.css" />
+
+<!-- locomotive-scroll -->
+<link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/locomotive-scroll@3.2.5/dist/locomotive-scroll.min.css"
+/>
+<script src="https://cdn.jsdelivr.net/npm/locomotive-scroll@3.2.5/dist/locomotive-scroll.min.js"></script>
+<%- include('parcials/after_import') %>
+<body id="js-scroll">
+    <div class="wrapper">
+    <div class="container">
+
+        <!-- navbar -->
+    <%- include('parcials/nav') %>
+
+    <h2>Upload Photo</h2>
+    <input type="file" id="photoInput">
+    <button onclick="uploadFile('photo', '/upload/photo')">Upload Photo</button>
+
+    <h2>Upload Video</h2>
+    <input type="file" id="videoInput">
+    <button onclick="uploadFile('video', '/upload/video')">Upload Video</button>
+
+    <script>
+        async function uploadFile(inputId, endpoint) {
+            const fileInput = document.getElementById(inputId + "Input");
+            if (!fileInput.files.length) {
+                alert("Please select a file.");
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append(inputId, fileInput.files[0]);
+
+            const response = await fetch(endpoint, {
+                method: "POST",
+                body: formData
+            });
+
+            const result = await response.json();
+            alert(result.message);
+            console.log(result);
+        }
+    </script>
+
+</body>
+</html>

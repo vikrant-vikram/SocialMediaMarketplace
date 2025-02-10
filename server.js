@@ -1,4 +1,14 @@
 
+
+
+
+
+
+
+
+
+
+// ============================================== Importing Required Modules ===================================================================================================
 const cors = require("cors")
 require("dotenv").config()
 const path = require('path');
@@ -6,7 +16,20 @@ const express = require('express');
 const app = express();
 const stripe = require("stripe")(process.env.STRIPE_PRIVATE_KEY);
 const bcrypt = require('bcrypt');
+var cookieParser = require('cookie-parser');
+const body= require("body-parser");
+let fs = require('fs');
+const mongoose=require("mongoose");
+const { Hash } = require("crypto");
+const multer = require("multer");
+const { v4: uuidv4 } = require("uuid");
+// const { $where } = require("./models/users");
 
+
+
+
+
+// =========================================================== Importing Required Models ===================================================================================================
 
 // import all Models from "./models";
 const AdminActionLog = require("./models/adminActionLog");
@@ -26,12 +49,11 @@ const Users = require("./models/users");
 
 
 
-var cookieParser = require('cookie-parser');
-const body= require("body-parser");
-let fs = require('fs');
-const mongoose=require("mongoose");
-const { Hash } = require("crypto");
-// const { $where } = require("./models/users");
+
+
+
+
+// =============================================================== Middleware ===================================================================================================
 
 
 app.use(cors({
@@ -45,10 +67,12 @@ const DBSERVER=process.env.MONGOOSE_DBSERVER;
 
 
 mongoose.connect(DBSERVER, {useNewUrlParser: true,useUnifiedTopology: true}).then(data=>{
-    console.log("COnnected To Mongoose Database");
+    console.log("Connected To Mongoose Database....");
 }).catch(err=>{
     console.log(err);
 });
+
+
 
 
 // var session = require('express-session');
@@ -81,23 +105,52 @@ app.use(body.json())
 
 app.use(body.urlencoded({extended:true}));
 
+app.set('view engine', 'ejs');
+app.use(express.static(__dirname + '/public'));
+app.use('/uploads', express.static('uploads'));
+app.use(express.json());
+
 
 //mongoose.connect("mongoosedb://localhost/defarm");
 
 
 
+// Configure Multer for File Uploads
+
+// Ensure upload directories exist
+const directories = ["uploads/images", "uploads/videos", "uploads/audio"];
+directories.forEach(dir => {
+    if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+    }
+});
+
+// Multer Storage Configuration
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        const fileType = file.mimetype.split("/")[0]; // Get the type (image, video, audio)
+        let folder = "uploads/others"; // Default folder
+
+        if (fileType === "image") {
+            folder = "uploads/images";
+        } else if (fileType === "video") {
+            folder = "uploads/videos";
+        } else if (fileType === "audio") {
+            folder = "uploads/audio";
+        }
+
+        cb(null, folder);
+    },
+    filename: function (req, file, cb) {
+        cb(null, Date.now() + path.extname(file.originalname)); // Rename file
+    }
+});
 
 
+const upload = multer({ storage: storage });
 
 
-
-
-
-
-
-
-
-
+// =============================================================== Stripe ===================================================================================================
 const products = new Map([
 
     [1, {name:"Basic(Monthly)", Price:process.env.BASIC_ID, Features: "Basic Plan (Monthly): 1000sms/month"}],
@@ -106,28 +159,18 @@ const products = new Map([
     [4, {name:"DIAMOND_ID", Price:process.env.DIAMOND_ID, Features: "Premium Plan (Yearly) : Unlimited sms/month"}]
 ])
 
-// setting up some handels
-
-app.set('view engine', 'ejs');
-app.use(express.static(__dirname + '/public'));
-app.use(express.json());
-
-
-app.set('view engine', 'ejs');
-app.use(express.static(__dirname + '/public'));
 
 
 
 
 
 
-// setting up some handels
 
 
 // ================================================ Get Request ===================================================================================================
 
 app.get('/', isLoggedIn, (req, res, next) => {
-    res.render("profile")
+    res.redirect("profile")
 
 });
 
@@ -141,8 +184,22 @@ app.get('/chat',isLoggedIn, async (req, res, next) => {
 });
   
   
-app.get("/profile",isLoggedIn,function (req, res) {
-    res.render("profile");
+app.get("/profile",isLoggedIn,async function (req, res) {
+    try {
+        // Get user from session
+        const user = req.session.user;
+        // Fetch the media files associated with the user
+        const mediaList = await Media.find({ uploaded_user_id: user.user_id });
+
+        // Render the EJS template and pass the data
+
+        res.render("profile", {user: req.session.user,  mediaFiles: mediaList});
+    } catch (error) {
+        res.status(500).json({ success: false, message: "Failed to retrieve media." });
+    }
+
+
+    
 
 });
 
@@ -164,7 +221,7 @@ app.get("/upload",isLoggedIn,function (req, res) {
 
 app.get("/register", function( req,res) {
     if(req.session.user){
-        res.render("profile")
+        res.redirect("/profile")
     }
 
     res.render("register");
@@ -182,12 +239,14 @@ app.get("/logout",isLoggedIn,function (req, res) {
 
 app.get("/login" , function (req, res) {
     if(req.session.user){
-        res.render("profile")
+        res.redirect("/profile")
     }
     console.log("/login-page accerss")
     res.render("login");
     
 });
+
+
 
 
 
@@ -198,41 +257,53 @@ app.get("*", function (req, res) {
 
 
 
+
+
 // ================================================================ Post Request ===================================================================================================
 
 
 
-app.post('/purchase',isLoggedIn, async (req, res, next) => {
+async function saveMediaDetails(req, file, fileType) {
+    console.log("Saving media details to database...");
+    console.log(req.session.user);
+
     try {
-        const item = products.get(parseInt(req.body.plan))
-        console.log(item)
-        const session = await stripe.checkout.sessions.create({
-            payment_method_types:["card"],
-            mode:"subscription",
-            currency: 'inr',
-            line_items:[{
+        let user_id = req.session.user.user_id;
 
-                price: item.Price,
-                quantity:1
-            
-            }],
-            success_url: `${process.env.SERVER_URL}/success`,
-            cancel_url: `${process.env.SERVER_URL}/cancel`
-  
-        })
-        res.redirect(session.url)
-        console.log(session)
+        // Check if user_id is a Buffer
+        if (Buffer.isBuffer(user_id)) {
+            // Convert Buffer to hex string and format it as a UUID
+            user_id = [
+                user_id.toString("hex").slice(0, 8),
+                user_id.toString("hex").slice(8, 12),
+                user_id.toString("hex").slice(12, 16),
+                user_id.toString("hex").slice(16, 20),
+                user_id.toString("hex").slice(20)
+            ].join("-");
+        }
 
+        // Validate if the final string is a UUID
+        if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(user_id)) {
+            throw new Error("Invalid UUID format after conversion.");
+        }
 
-        
+        const media = new Media({
+            media_id: Date.now(), // Unique ID based on timestamp
+            uploaded_user_id: user_id, // Correctly formatted UUID
+            file_size: file.size,
+            file_type: fileType,
+            file_url: `/uploads/${fileType.toLowerCase()}s/${file.filename}`,
+            is_encrypted: false,
+            created_at: new Date(),
+            status: "Active"
+        });
+
+        await media.save();
+        console.log(" Media saved to database:", media);
     } catch (error) {
-        console.log(error);
-        res.render("bazinga")
-        
+        console.error(" Error saving media:", error);
     }
-
-
-});
+}
 
 
 
@@ -243,7 +314,7 @@ app.post("/register", formVailidation, async function( req,res) {
     // Have Not implemented the Hashing of password yet
 
     if(req.session.user){
-        res.render("profile")
+        res.redirect("/profile")
     }
 
     const passwordHash = await createHash(req.body.password); 
@@ -283,14 +354,9 @@ app.post("/register", formVailidation, async function( req,res) {
 });
 
 
-
-
-
-
-
 app.post("/login", async function(req, res) {
     if (req.session.user) {
-        return res.render("profile");
+        return res.redirect("/profile");
     }
 
     try {
@@ -311,7 +377,7 @@ app.post("/login", async function(req, res) {
 
         console.log("User authenticated");
         req.session.user = user;
-        res.render("profile");
+        res.redirect("/profile");
 
     } catch (err) {
         console.error("Login Error:", err);
@@ -326,10 +392,24 @@ app.post("/login", async function(req, res) {
 
 
 
+// Upload Routes
+app.post("/upload/photo", upload.single("photo"), async (req, res) => {
+    if (!req.file) return res.status(400).send("No file uploaded.");
+    await saveMediaDetails(req, req.file, "Image");
+    res.send({ message: "Photo uploaded successfully!", file: req.file });
+});
 
+app.post("/upload/video", upload.single("video"), async (req, res) => {
+    if (!req.file) return res.status(400).send("No file uploaded.");
+    await saveMediaDetails(req, req.file, "Video");
+    res.send({ message: "Video uploaded successfully!", file: req.file });
+});
 
-
-
+app.post("/upload/audio", upload.single("audio"), async (req, res) => {
+    if (!req.file) return res.status(400).send("No file uploaded.");
+    await saveMediaDetails(req, req.file, "Audio");
+    res.send({ message: "Audio uploaded successfully!", file: req.file });
+});
 
 
 
@@ -342,50 +422,33 @@ app.listen(PORT, () => {
 
 
 
+async function saveMediaDetails(req, file, fileType) {
+    console.log("Saving media details to database...");
+    console.log(req.session.user);
 
+    try {
+        let user_id = req.session.user.user_id;
 
+        const media = new Media({
+            media_id: Date.now(),
+            uploaded_user_id: user_id,
+            file_size: file.size,
+            file_type: fileType,
+            file_url: `/uploads/${fileType.toLowerCase()}s/${file.filename}`,
+            is_encrypted: false,
+            created_at: new Date(),
+            status: "Active"
+        });
 
-
-
-
-
-function formVailidation(req,res,next){
-    return next();
-    usersname=req.body.name
-    email=req.body.email
-    password=req.body.password
-    pan_number=req.body.pan_number
-    contact_number=req.body.contact_number
-    subscription_type=req.body.subscription_type,
-    business_name=req.body.business_name,
-    business_webiste=req.body.business_webiste
- 
-
-    if(nameValidation(usersname)&& emailValidation(email)  && passwordVailidation(password)  && panVailidation(pan_number) && contactVailidation(contact_number) && nameValidation(business_name)  && websiteVailidation(business_webiste)){
-        
-        return next();
-    }
-
-    else{
-
-        // console.log(nameValidation(usersname))
-        // console.log(emailValidation(email))
-
-        // console.log(passwordVailidation(password))
-
-        // console.log(panVailidation(pan_number))
-
-        // console.log(contactVailidation(contact_number))
-
-        // console.log(websiteVailidation(business_webiste))
-
-        // console.log(nameValidation(business_name))
-
-        // console.log(email)
-        console.log("Form Vailidation failed")
-        res.render("register");
+        await media.save();
+        console.log("Media saved to database:", media);
+    } catch (error) {
+        console.error(" Error saving media:", error);
     }
 }
+
+
+
 
 
 
@@ -401,11 +464,39 @@ function checkForLogin(req,res,next)
 {
     if(req.session.user)
     {
-        res.render("profile");
+        res.redirect("/profile");
         
     }
     return next();
 }
+
+
+
+
+
+
+function formVailidation(req,res,next){
+
+    username =req.body.username
+    name =req.body.name
+    email =req.body.email
+    mobile_number = req.body.mobile_number
+    password = req.body.password
+ 
+
+    if(nameValidation(username)&& emailValidation(email)  && passwordVailidation(password)  && contactVailidation(mobile_number) && nameValidation(name)){
+        
+        return next();
+    }
+
+    else{
+        console.log("Form Vailidation failed")
+        res.render("register");
+    }
+}
+
+
+
 
 
 
@@ -424,13 +515,12 @@ function nameValidation(name){
     }
     else
     {
-        console.log("name verification failed")
+        console.log("Name verification failed.")
         return false;
     }
-
 }
-function emailValidation(email){
 
+function emailValidation(email){
     var mailformat = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
     if(mailformat.test(email))
     {
@@ -439,7 +529,7 @@ function emailValidation(email){
     }
     else
     {
-        console.log("Email verification failed")
+        console.log("Email verification failed.")
         return false;
     }
 
@@ -455,10 +545,9 @@ function passwordVailidation(password){
     }
     else
     {
-        console.log("password verification failed")
+        console.log("Password verification failed.")
         return false;
     }
-
 }
 
 function contactVailidation(contact){
@@ -471,24 +560,9 @@ function contactVailidation(contact){
     }
     else
     {
-        console.log("contact verification failed")
+        console.log("Contact verification failed.")
         return false;
     }
-}
-
-function websiteVailidation(website){
-    const websiteRegex = /^(http(s)?:\/\/)?[a-zA-Z0-9-]+(\.[a-zA-Z0-9-]+)*(\.[a-zA-Z]{2,})(\/[a-zA-Z0-9-._~:/?#[\]@!$&'()*+,;=]*)?$/;
-    if(websiteRegex.test(website))
-    {
-        
-        return true;
-    }
-    else
-    {
-        console.log("waebsite verification failed")
-        return false;
-    }
-
 }
 
 

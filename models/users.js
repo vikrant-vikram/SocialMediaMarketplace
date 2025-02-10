@@ -1,7 +1,8 @@
 const mongoose = require("mongoose");
+const { v4: uuidv4 } = require("uuid"); // Import UUID generator
 
 const userSchema = new mongoose.Schema({
-    user_id: { type: mongoose.Schema.Types.UUID, default: () => crypto.randomUUID(), unique: true },
+    user_id: { type: String, default: uuidv4, unique: true }, // Store UUID as a String
     username: { type: String, required: true, unique: true },
     name: { type: String, required: true },
     email: { type: String, required: true, unique: true },

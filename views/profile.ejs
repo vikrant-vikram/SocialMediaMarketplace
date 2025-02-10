@@ -1,9 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<%- include('parcials/before_import') %>
     <!-- <link href="https://fonts.cdnfonts.com/css/voyage" rel="stylesheet"> -->
     <!-- <link href="https://fonts.cdnfonts.com/css/pp-neue-montreal" rel="stylesheet"> -->
 
@@ -11,14 +6,11 @@
     <link rel="stylesheet" href="/css/blob.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.10.4/gsap.min.js"></script>
 
-    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" integrity="sha512-7eHRwcbYkK4d9g/6tD/mhkf++eoTHwpNM9woBxtPUBWm67zeAfFC+HrdoE2GanKeocly/VxeLvIqwvCdk7qScg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script> -->
-    <title>SocialHub</title>
-</head>
-<body>
+    <%- include('parcials/after_import') %>
     <div class="container"></div>
     <%- include('parcials/nav') %>
 
-    
+
         <div class="container">
             <div class="blobs">
                 <div class="blob a">a</div>
@@ -29,45 +21,102 @@
         <div class="hero-container">
             <div class="hero">
                 <!-- <h1>Vikrant,<br />Vikram <br />Improve <br />Explore.</h1> -->
-                <h1>Random<br />Name </h1>
+                <h1><%= user.name %><br />Name </h1>
 
             <div class="cta">
-                <button onclick="window.location.href='http://localhost:8080/chat'">Edit Profile</button>
+                <button onclick="window.location.href='/chat'">Edit Profile</button>
             </div>
 
             <p>
                 Lorem ipsum dolor sit, amet consectetur adipisicing elit.
                 Consequuntur mollitia totam pariatur unde explicabo dolorum dicta
                 quod placeat odit facere.
+                <a href="/upload">Upload</a>
             </p>
         </div>
         <div class="blob blob-1"></div>
         <div class="blob blob-2"></div>
         <div class="blob blob-3"></div>
 
+        <div class="media-container">
+            <h1>Media!</h1>
+            <div id="content">
+                <!-- You can add other content above the media scroll if needed -->
+            </div>
+        </div>
 
 
-        <!-- <section class="grid">
-            <div class="card">
-                <img src="/images/1.jpg" alt="Image 1">
-                <h2>Photo Title 1</h2>
-            </div>
-            <div class="card">
-                <img src="/images/2.jpg" alt="Image 2">
-                <h2>Photo Title 2</h2>
-            </div>
-            <div class="card">
-                <img src="/images/1.jpg" alt="Image 3">
-                <h2>Photo Title 3</h2>
-            </div>
-            <div class="card">
-                <img src="/images/2.jpg" alt="Image 4">
-                <h2>Photo Title 4</h2>
-            </div>
-        </section> -->
 
-
-    </div>
+        <div id="media-scroll" class="media-scroll">
+            <% mediaFiles.forEach(media => { %>
+                <div class="media-item" data-media-id="<%= media.media_id %>">
+                    <% if (media.file_type === 'Image') { %>
+                        <img src="<%= media.file_url %>" alt="Media Image" class="media-image">
+                    <% } else if (media.file_type === 'Video') { %>
+                        <video class="media-video" controls>
+                            <source src="<%= media.file_url %>" type="video/mp4">
+                            Your browser does not support the video tag.
+                        </video>
+                    <% } else if (media.file_type === 'Audio') { %>
+                        <audio class="media-audio" controls>
+                            <source src="<%= media.file_url %>" type="audio/mpeg">
+                            Your browser does not support the audio element.
+                        </audio>
+                    <% } %>
+                    <p class="media-info">Uploaded on: <%= media.created_at.toLocaleDateString() %></p>
+                </div>
+            <% }) %>
+        </div>
+    
+        <!-- Loader for infinite scroll -->
+        <div id="loading" style="display:none; text-align:center;">
+            <p>Loading more media...</p>
+        </div>
+    
+        <script>
+            // Infinite scroll functionality
+            let page = 1;
+            let isLoading = false;
+    
+            // Function to load more media
+            function loadMoreMedia() {
+                if (isLoading) return; // Avoid multiple calls at once
+                isLoading = true;
+                page++;
+    
+                // Show the loading spinner
+                $('#loading').show();
+    
+                // Make an AJAX call to fetch more media
+                $.get('/user/media?page=' + page, function(data) {
+                    const mediaScroll = $('#media-scroll');
+                    
+                    // Append the new media items
+                    data.mediaFiles.forEach(media => {
+                        const mediaItem = `<div class="media-item" data-media-id="${media.media_id}">
+                            ${media.file_type === 'Image' ? 
+                                `<img src="${media.file_url}" alt="Media Image" class="media-image">` : 
+                                media.file_type === 'Video' ? 
+                                `<video class="media-video" controls><source src="${media.file_url}" type="video/mp4"></video>` : 
+                                `<audio class="media-audio" controls><source src="${media.file_url}" type="audio/mpeg"></audio>`}
+                            <p class="media-info">Uploaded on: ${new Date(media.created_at).toLocaleDateString()}</p>
+                        </div>`;
+                        mediaScroll.append(mediaItem);
+                    });
+    
+                    // Hide the loading spinner
+                    $('#loading').hide();
+                    isLoading = false;
+                });
+            }
+    
+            // Check if the user has scrolled to the right
+            $(window).on('scroll', function() {
+                if ($(window).scrollLeft() + $(window).width() >= $(document).width() - 100) {
+                    loadMoreMedia();
+                }
+            });
+        </script>
 
 
   <script src="/js/script.js"></script>
