@@ -23,9 +23,20 @@
                 <!-- <h1>Vikrant,<br />Vikram <br />Improve <br />Explore.</h1> -->
                 <h1><%= user.name %><br /> </h1>
 
-            <div class="cta">
-                <button onclick="window.location.href='/follow/<%= user.username %>'">Follow</button>
-            </div>
+
+                <!-- Check if Current USer has Already send a Frient Reduesr -->
+                    <% if (!friendship ) { %>
+                        
+                        <div class="cta">
+                            <button onclick="window.location.href='/follow/<%= user.username %>'">Follow</button>
+                        </div>
+                    <% } else { %>
+                        <div class="cta">
+                            <button onclick=""><%= friendship.status %></button>
+                        </div>
+                    <% } %>
+
+
 
             <p>
                 <%= user.bio %>

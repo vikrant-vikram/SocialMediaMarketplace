@@ -43,6 +43,7 @@ const Message = require("./models/message");
 const Report = require("./models/report");
 const Transaction = require("./models/transaction");
 const Users = require("./models/users");
+const friendship = require("./models/friendship");
 
 
 
@@ -60,25 +61,14 @@ const  PORT = process.env.PORT ;
 const DBSERVER=process.env.MONGOOSE_DBSERVER;
 
 
-// mongoose.connect(DBSERVER, {useNewUrlParser: true,useUnifiedTopology: true}).then(data=>{
-//     console.log("Connected To Mongoose Database....");
-// }).catch(err=>{
-//     console.log(err);
-// });
-
-
 mongoose.connect(DBSERVER)
   .then(() => console.log('Connected to MongoDB'))
   .catch(err => console.error('Could not connect to MongoDB', err));
 
 
 
-// var session = require('express-session');
-
-
 
 app.use(cookieParser());
-// app.use(session({secret: "Shh, its a secret!"}));
 app.use(require("express-session")(
 {
     secret: process.env.SECRET,
@@ -113,8 +103,12 @@ app.use(express.json());
 
 
 
-// Configure Multer for File Uploads
 
+
+
+
+
+// Configure Multer for File Uploads
 // Ensure upload directories exist
 // Define directories for different media types
 const directories = [
@@ -122,8 +116,10 @@ const directories = [
     "uploads/videos",
     "uploads/audio",
     "uploads/others",
-    "uploads/profile_pictures" // Added for profile pictures
+    "uploads/profile_pictures"
 ];
+
+
 
 // Ensure all directories exist
 directories.forEach(dir => {
@@ -131,6 +127,9 @@ directories.forEach(dir => {
         fs.mkdirSync(dir, { recursive: true });
     }
 });
+
+
+
 
 // Multer Storage Configuration
 const storage = multer.diskStorage({
@@ -157,6 +156,10 @@ const storage = multer.diskStorage({
         cb(null, Date.now() + path.extname(file.originalname)); // Unique filename
     }
 });
+
+
+
+
 
 // Multer Upload Middleware
 const upload = multer({ 
@@ -228,6 +231,7 @@ app.get("/profile",isLoggedIn,async function (req, res) {
 
 });
 
+
 app.get("/marketplace",isLoggedIn,function (req, res) {
     res.render("marketplace");
 
@@ -266,6 +270,22 @@ app.get("/logout",isLoggedIn,function (req, res) {
 });
 
 
+app.get("/blockunblock",isLoggedIn,function (req, res) {
+
+    res.render("search");
+
+});
+
+
+
+
+
+
+
+
+
+
+
 
 app.get("/login" , function (req, res) {
     if(req.session.user){
@@ -291,23 +311,45 @@ app.get('/user/:username', isLoggedIn, async (req, res) => {
             return res.redirect("/search");  // Return to prevent further execution
         }
 
-                // Get user from session
+            // Get user from session
             // Fetch the media files associated with the user
             const mediaList = await Media.find({ uploaded_user_id: user.user_id });
     
             // Render the EJS template and pass the data
             console.log("User found");
 
+
+
+            const currentUser = req.session.user; // Logged-in user
+            const targetUser = await Users.findOne({ username: req.params.username });
     
-            res.render("viewProfile", {user: user,  mediaFiles: mediaList});
+            console.log("Following user:", targetUser);
+            console.log("Current user:", currentUser);
+    
+            // If no target user is found, redirect to a search or error page
+    
+            // Check if a follow request already exists
+            const existingFollow = await Friendship.findOne({
+                user_id: currentUser._id,
+                friend_id_or_follow_id: targetUser._id,
+            });
+
+            // if (existingFollow) {
+            //     return res.redirect(`/user/${targetUser.username}`);
+            // }
+
+
+
+
+
+    
+            res.render("viewProfile", {user: user,  mediaFiles: mediaList, friendship: existingFollow});
 
     } catch (err) {
         console.error("User Finding Error:", err);
         res.redirect("/profile");
     }
 });
-
-
 
 app.get("/follow/:username", isLoggedIn, async (req, res) => {
     try {
@@ -351,6 +393,31 @@ app.get("/follow/:username", isLoggedIn, async (req, res) => {
     }
 });
 
+
+
+
+app.get("/followrequest", isLoggedIn, async (req, res) => {
+    try {
+        const currentUser = req.session.user; // Logged-in user
+
+        // Step 1: Find all pending follow requests where currentUser is the target
+        const pendingRequests = await Friendship.find({
+            status: "Pending",
+            user_id: currentUser._id, // Current user is the recipient
+        }).populate("friend_id_or_follow_id", "username name profile_picture_url bio"); // Populate sender details
+
+        // Step 2: Extract users who sent requests
+        console.log("Pending requests:", pendingRequests);
+        const usersWhoSentRequests = pendingRequests.map(request => request.friend_id_or_follow_id);
+
+        // Step 3: Pass the data to search.ejs
+        console.log("Users who sent requests:", usersWhoSentRequests);
+        res.render("search", { users: usersWhoSentRequests });
+    } catch (error) {
+        console.error("Error fetching follow requests:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
 
 
 
@@ -553,11 +620,6 @@ app.post("/upload/audio", upload.single("audio"), async (req, res) => {
 // ================================================================ Handler Functions ===================================================================================================
 
 
-app.listen(PORT, () => {
-    console.log('serever is live at  port  no: %s', PORT )
-});
-
-
 
 async function saveMediaDetails(req, file, fileType) {
     console.log("Saving media details to database...");
@@ -704,3 +766,20 @@ async function createHash(password) {
     return password_hash;
 
 }
+
+
+
+
+
+
+
+
+
+
+
+
+// ==================================================== Listen ===================================================================================================
+app.listen(PORT, () => {
+    console.log('serever is live at  port  no: %s', PORT )
+});
+
