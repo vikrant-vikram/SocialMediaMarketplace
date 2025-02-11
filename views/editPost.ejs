@@ -1,0 +1,59 @@
+<%- include('parcials/before_import') %>
+<link rel="stylesheet" href="/css/profile.css" />
+
+<!-- locomotive-scroll -->
+<link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/locomotive-scroll@3.2.5/dist/locomotive-scroll.min.css"
+/>
+<script src="https://cdn.jsdelivr.net/npm/locomotive-scroll@3.2.5/dist/locomotive-scroll.min.js"></script>
+<%- include('parcials/after_import') %>
+<body id="js-scroll">
+    <div class="wrapper">
+        <div class="container">
+
+
+
+        <!-- navbar -->
+        <%- include('parcials/nav') %>
+
+
+
+        <div class="container">
+            <div class="edit-post-form">
+                <h2>Edit Post</h2>
+
+                <form action="/post/update/<%= post.media_id %>" method="POST" enctype="multipart/form-data">
+                    <div class="post-preview">
+                        <% if (post.file_type === 'Image') { %>
+                            <img id="mediaPreview" src="<%= post.file_url %>" alt="Post Image">
+                        <% } else if (post.file_type === 'Video') { %>
+                            <video id="mediaPreview" controls>
+                                <source src="<%= post.file_url %>" type="video/mp4">
+                            </video>
+                        <% } %>
+                    </div>
+
+                    <input type="file" name="media_file" accept="image/*,video/*" id="mediaInput">
+                    <textarea name="caption" placeholder="Update caption"><%= post.caption %></textarea>
+
+                    <select name="status">
+                        <option value="Active" <%= post.status === 'Active' ? 'selected' : '' %>>Active</option>
+                        <option value="Archived" <%= post.status === 'Archived' ? 'selected' : '' %>>Archived</option>
+                    </select>
+
+                    <button type="submit">Update Post</button>
+                </form>
+            </div>
+        </div>
+
+        <script>
+            document.getElementById("mediaInput").addEventListener("change", function(event) {
+                const file = event.target.files[0];
+                if (file) {
+                    document.getElementById("mediaPreview").src = URL.createObjectURL(file);
+                }
+            });
+        </script>
+
+        

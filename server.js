@@ -47,12 +47,6 @@ const Users = require("./models/users");
 
 
 
-
-
-
-
-
-
 // =============================================================== Middleware ===================================================================================================
 
 
@@ -66,12 +60,16 @@ const  PORT = process.env.PORT ;
 const DBSERVER=process.env.MONGOOSE_DBSERVER;
 
 
-mongoose.connect(DBSERVER, {useNewUrlParser: true,useUnifiedTopology: true}).then(data=>{
-    console.log("Connected To Mongoose Database....");
-}).catch(err=>{
-    console.log(err);
-});
+// mongoose.connect(DBSERVER, {useNewUrlParser: true,useUnifiedTopology: true}).then(data=>{
+//     console.log("Connected To Mongoose Database....");
+// }).catch(err=>{
+//     console.log(err);
+// });
 
+
+mongoose.connect(DBSERVER)
+  .then(() => console.log('Connected to MongoDB'))
+  .catch(err => console.error('Could not connect to MongoDB', err));
 
 
 
@@ -140,7 +138,7 @@ const storage = multer.diskStorage({
         let folder = "uploads/others"; // Default folder
 
         // Handle profile picture uploads separately
-        if (req.route.path === "/register" && file.fieldname === "profile_picture") {
+        if ((req.route.path === "/register"|| req.route.path === "/profile/update" )&& file.fieldname === "profile_picture") {
             folder = "uploads/profile_pictures";
         } else {
             const fileType = file.mimetype.split("/")[0]; // Extract type (image, video, audio)
@@ -198,8 +196,14 @@ app.get('/', isLoggedIn, (req, res, next) => {
 
 });
 
-app.get('/search', isLoggedIn, (req, res, next) => {
-    res.render('search');
+app.get('/search', isLoggedIn, async (req, res, next) => {
+    try {
+        const users = await Users.find({}, { password_hash: 0 }); // Exclude password hash for security
+        res.render("search", { users }); // Render the 'users.ejs' template with the data
+    } catch (error) {
+        console.error("Error fetching users:", error);
+        res.redirect("/profile");
+    }
 });
 
 
@@ -222,9 +226,6 @@ app.get("/profile",isLoggedIn,async function (req, res) {
         res.status(500).json({ success: false, message: "Failed to retrieve media." });
     }
 
-
-    
-
 });
 
 app.get("/marketplace",isLoggedIn,function (req, res) {
@@ -242,6 +243,11 @@ app.get("/upload",isLoggedIn,function (req, res) {
 
 });
 
+
+app.get("/editprofile",isLoggedIn,function (req, res) {
+    res.render("editProfile",{ user: req.session.user});
+
+});
 
 app.get("/register", function( req,res) {
     if(req.session.user){
@@ -269,6 +275,82 @@ app.get("/login" , function (req, res) {
     res.render("login");
     
 });
+
+
+
+app.get('/user/:username', isLoggedIn, async (req, res) => {
+    const username = req.params.username;
+    console.log("Searching for user:", username);
+
+    try {
+        // Find user in database (Fix typo: username instead of usernaame)
+        const user = await Users.findOne({ username: username });
+
+        if (!user) {
+            console.log("No user found with this username");
+            return res.redirect("/search");  // Return to prevent further execution
+        }
+
+                // Get user from session
+            // Fetch the media files associated with the user
+            const mediaList = await Media.find({ uploaded_user_id: user.user_id });
+    
+            // Render the EJS template and pass the data
+            console.log("User found");
+
+    
+            res.render("viewProfile", {user: user,  mediaFiles: mediaList});
+
+    } catch (err) {
+        console.error("User Finding Error:", err);
+        res.redirect("/profile");
+    }
+});
+
+
+
+app.get("/follow/:username", isLoggedIn, async (req, res) => {
+    try {
+        const currentUser = req.session.user; // Logged-in user
+        const targetUser = await Users.findOne({ username: req.params.username });
+
+        console.log("Following user:", targetUser);
+        console.log("Current user:", currentUser);
+
+        // If no target user is found, redirect to a search or error page
+        if (!targetUser) {
+            return res.redirect("/search"); // Or a custom error page
+        }
+
+        // Check if a follow request already exists
+        const existingFollow = await Friendship.findOne({
+            user_id: currentUser._id,
+            friend_id_or_follow_id: targetUser._id,
+        });
+
+        // If the user is already following, redirect to the profile page
+        if (existingFollow) {
+            return res.redirect(`/user/${targetUser.username}`);
+        }
+
+        // Create a new follow request if no existing request is found
+        const followRequest = new Friendship({
+            relationship_id: Math.floor(Math.random() * 1000000), // Generate a unique ID
+            user_id: currentUser._id,
+            friend_id_or_follow_id: targetUser._id,
+            status: "Pending",
+        });
+
+        await followRequest.save();
+
+        // Respond with success message or redirect to the target user's profile
+        return res.redirect(`/user/${targetUser.username}`); // Redirect to target user's profile page
+    } catch (error) {
+        console.error("Error following user:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+
 
 
 
@@ -331,53 +413,6 @@ async function saveMediaDetails(req, file, fileType) {
 
 
 
-
-// app.post("/register", formVailidation, async function( req,res) {
-    
-
-//     // Have Not implemented the Hashing of password yet
-
-//     if(req.session.user){
-//         res.redirect("/profile")
-//     }
-
-//     const passwordHash = await createHash(req.body.password); 
-
-//     const user={
-//         username:req.body.username,
-//         name:req.body.name,
-//         email:req.body.email,
-//         mobile_number:req.body.mobile_number,
-//         password_hash:passwordHash,
-//         profile_picture_url:req.body.profile
-//     }
-            
-//     // console.log(req.body.name);
-//     console.log(user);
-//     await Users.findOne({contact_number:"req.body.contact_number"}).then(found=>{
-//         if(found)
-//         res.send("Contact is alreaady in Use");
-//         else{
-//             Users.create(user).then(user=>{
-        
-
-//                 console.log(user);
-//                 res.render("login");
-                
-//             }).catch(err=>{
-//                 console.log(err)
-//                 res.render("register")
-//             });
-//         }
-//     }).catch(err=>{
-//         console.log(err);
-//         res.render("register");
-//     });    
-        
-    
-// });
-
-
 app.post("/register", upload.single("profile_picture"), formVailidation, async function(req, res) {
     if (req.session.user) {
         return res.redirect("/profile");
@@ -393,6 +428,7 @@ app.post("/register", upload.single("profile_picture"), formVailidation, async f
             email: req.body.email,
             mobile_number: req.body.mobile_number,
             password_hash: passwordHash,
+            bio: req.body.bio,
             profile_picture_url: req.file ? `/uploads/profile_pictures/${req.file.filename}` : null
         };
 
@@ -446,7 +482,48 @@ app.post("/login", async function(req, res) {
 });
 
 
+// POST Update Profile
+app.post("/profile/update", isLoggedIn, isLoggedIn, upload.single("profile_picture"), async (req, res) => {
+    try {
+        const userId = req.session.user.user_id; // Get UUID from session
 
+        // Prepare updated user data
+        const updatedData = {
+            username: req.body.username,
+            name: req.body.name,
+            email: req.body.email,
+            mobile_number: req.body.mobile_number,
+            bio: req.body.bio,
+            updated_at: Date.now(),
+        };
+
+        console.log("Updating user:", updatedData);
+
+        // Handle profile picture update
+        if (req.file) {
+            updatedData.profile_picture_url = "/uploads/profile_pictures/" + req.file.filename;
+            console.log("Profile picture updated:", updatedData.profile_picture_url);
+        }
+
+        const updatedUser = await Users.findOneAndUpdate(
+            { user_id: userId }, // Search by `user_id`
+            updatedData,
+            { new: true }
+        );
+
+        if (!updatedUser) {
+            return res.status(404).send("User not found.");
+        }
+
+        // Update session data
+        req.session.user = { ...req.session.user, ...updatedData };
+
+        res.redirect("/profile");
+    } catch (error) {
+        console.error("Error updating profile:", error);
+        res.redirect("/editProfile");
+    }
+});
 
 
 
@@ -558,14 +635,6 @@ function formVailidation(req,res,next){
 
 
 
-
-
-
-
- 
-// Vialidation are here
-
-
 function nameValidation(name){
     const nameRegex = /^[a-zA-Z]+(([',. -][a-zA-Z ])?[a-zA-Z]*)*$/;
     if(nameRegex.test(name))
@@ -628,14 +697,10 @@ function contactVailidation(contact){
 
 
 
-
-
-
-
 async function createHash(password) {
     const saltRounds = 10;
     password_hash = await bcrypt.hash(password, saltRounds);
-    console.log("Hashing have been done")
+    console.log("Hashing have been done....")
     return password_hash;
 
 }

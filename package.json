@@ -4,8 +4,8 @@
   "description": "Igniting crackers in diwali using arduino ",
   "main": "server.js",
   "scripts": {
-    "test": "node server.js",
-    "start": "node server.js"
+    "start": "node server.js",
+    "dev": "nodemon server.js"
   },
   "author": "bikrant bikram",
   "license": "ISC",

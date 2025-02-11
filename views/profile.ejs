@@ -21,16 +21,15 @@
         <div class="hero-container">
             <div class="hero">
                 <!-- <h1>Vikrant,<br />Vikram <br />Improve <br />Explore.</h1> -->
-                <h1><%= user.name %><br />Name </h1>
+                <h1><%= user.name %><br /> </h1>
 
             <div class="cta">
-                <button onclick="window.location.href='/chat'">Edit Profile</button>
+                <button onclick="window.location.href='/editprofile'">Edit Profile</button>
             </div>
 
             <p>
-                Lorem ipsum dolor sit, amet consectetur adipisicing elit.
-                Consequuntur mollitia totam pariatur unde explicabo dolorum dicta
-                quod placeat odit facere.
+                <%= user.bio %>
+                <br>
                 <a href="/upload">Upload</a>
             </p>
         </div>
@@ -39,7 +38,7 @@
         <div class="blob blob-3"></div>
 
         <div class="media-container">
-            <h1>Media!</h1>
+            <h1>Feed!</h1>
             <div id="content">
                 <!-- You can add other content above the media scroll if needed -->
             </div>
@@ -69,9 +68,9 @@
         </div>
     
         <!-- Loader for infinite scroll -->
-        <div id="loading" style="display:none; text-align:center;">
+        <!-- <div id="loading" style="display:none; text-align:center;">
             <p>Loading more media...</p>
-        </div>
+        </div> -->
     
         <script>
             // Infinite scroll functionality

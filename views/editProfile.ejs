@@ -1,0 +1,35 @@
+<%- include('parcials/before_import') %>
+<link rel="stylesheet" href="/css/profile.css">
+
+<%- include('parcials/nav') %>
+
+<div class="container">
+    <div class="edit-profile-form">
+        <h2>Edit Profile</h2>
+
+        <form action="/profile/update" method="POST" enctype="multipart/form-data">
+            <div class="profile-picture">
+                <!-- Fallback for profile picture -->
+                <img id="profilePreview" src="<%= user.profile_picture_url || '/images/default-profile.jpg' %>" alt="Profile Picture">
+                <input type="file" name="profile_picture" accept="image/*" id="profileInput">
+            </div>
+
+            <input type="text" name="username" value="<%= user.username %>" required placeholder="Username">
+            <input type="text" name="name" value="<%= user.name %>" required placeholder="Full Name">
+            <input type="text" name="mobile_number" value="<%= user.mobile_number %>" required placeholder="Contact Number">
+            <input type="email" name="email" value="<%= user.email %>" required placeholder="Email">
+            <textarea name="bio" placeholder="Bio"><%= user.bio %></textarea>
+
+            <button type="submit">Save Changes</button>
+        </form>
+    </div>
+</div>
+
+<script>
+    document.getElementById("profileInput").addEventListener("change", function(event) {
+        const file = event.target.files[0];
+        if (file) {
+            document.getElementById("profilePreview").src = URL.createObjectURL(file);
+        }
+    });
+</script>
