@@ -34,7 +34,7 @@
                 <a href="/upload">Upload</a>
             </p>
         </div>
-        <div class="blob blob-1"></div>
+        <div class="blob blob-1" data-user-profile="<%= user.profile_picture_url %>" ></div>
         <div class="blob blob-2"></div>
         <div class="blob blob-3"></div>
 
@@ -120,6 +120,15 @@
 
 
   <script src="/js/script.js"></script>
+  
+    <script>
+        document.querySelectorAll(".blob-1").forEach(el => {
+            let profileUrl = el.getAttribute("data-user-profile");
+            if (profileUrl) {
+                el.style.backgroundImage = `url('${profileUrl}')`;
+            }
+        });
+    </script>
 
 </body>
 </html>

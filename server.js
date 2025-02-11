@@ -118,7 +118,16 @@ app.use(express.json());
 // Configure Multer for File Uploads
 
 // Ensure upload directories exist
-const directories = ["uploads/images", "uploads/videos", "uploads/audio"];
+// Define directories for different media types
+const directories = [
+    "uploads/images",
+    "uploads/videos",
+    "uploads/audio",
+    "uploads/others",
+    "uploads/profile_pictures" // Added for profile pictures
+];
+
+// Ensure all directories exist
 directories.forEach(dir => {
     if (!fs.existsSync(dir)) {
         fs.mkdirSync(dir, { recursive: true });
@@ -128,26 +137,41 @@ directories.forEach(dir => {
 // Multer Storage Configuration
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
-        const fileType = file.mimetype.split("/")[0]; // Get the type (image, video, audio)
         let folder = "uploads/others"; // Default folder
 
-        if (fileType === "image") {
-            folder = "uploads/images";
-        } else if (fileType === "video") {
-            folder = "uploads/videos";
-        } else if (fileType === "audio") {
-            folder = "uploads/audio";
+        // Handle profile picture uploads separately
+        if (req.route.path === "/register" && file.fieldname === "profile_picture") {
+            folder = "uploads/profile_pictures";
+        } else {
+            const fileType = file.mimetype.split("/")[0]; // Extract type (image, video, audio)
+            if (fileType === "image") {
+                folder = "uploads/images";
+            } else if (fileType === "video") {
+                folder = "uploads/videos";
+            } else if (fileType === "audio") {
+                folder = "uploads/audio";
+            }
         }
 
         cb(null, folder);
     },
     filename: function (req, file, cb) {
-        cb(null, Date.now() + path.extname(file.originalname)); // Rename file
+        cb(null, Date.now() + path.extname(file.originalname)); // Unique filename
     }
 });
 
-
-const upload = multer({ storage: storage });
+// Multer Upload Middleware
+const upload = multer({ 
+    storage: storage,
+    limits: { fileSize: 10 * 1024 * 1024 }, // Limit to 10MB
+    fileFilter: function (req, file, cb) {
+        const allowedMimeTypes = ["image/", "video/", "audio/"];
+        if (!allowedMimeTypes.some(type => file.mimetype.startsWith(type))) {
+            return cb(new Error("Invalid file type"), false);
+        }
+        cb(null, true);
+    }
+});
 
 
 // =============================================================== Stripe ===================================================================================================
@@ -308,50 +332,86 @@ async function saveMediaDetails(req, file, fileType) {
 
 
 
-app.post("/register", formVailidation, async function( req,res) {
+// app.post("/register", formVailidation, async function( req,res) {
     
 
-    // Have Not implemented the Hashing of password yet
+//     // Have Not implemented the Hashing of password yet
 
-    if(req.session.user){
-        res.redirect("/profile")
-    }
+//     if(req.session.user){
+//         res.redirect("/profile")
+//     }
 
-    const passwordHash = await createHash(req.body.password); 
+//     const passwordHash = await createHash(req.body.password); 
 
-    const user={
-        username:req.body.username,
-        name:req.body.name,
-        email:req.body.email,
-        mobile_number:req.body.mobile_number,
-        password_hash:passwordHash,
-        profile_picture_url:req.body.profile
-    }
+//     const user={
+//         username:req.body.username,
+//         name:req.body.name,
+//         email:req.body.email,
+//         mobile_number:req.body.mobile_number,
+//         password_hash:passwordHash,
+//         profile_picture_url:req.body.profile
+//     }
             
-    // console.log(req.body.name);
-    console.log(user);
-    await Users.findOne({contact_number:"req.body.contact_number"}).then(found=>{
-        if(found)
-        res.send("Contact is alreaady in Use");
-        else{
-            Users.create(user).then(user=>{
+//     // console.log(req.body.name);
+//     console.log(user);
+//     await Users.findOne({contact_number:"req.body.contact_number"}).then(found=>{
+//         if(found)
+//         res.send("Contact is alreaady in Use");
+//         else{
+//             Users.create(user).then(user=>{
         
 
-                console.log(user);
-                res.render("login");
+//                 console.log(user);
+//                 res.render("login");
                 
-            }).catch(err=>{
-                console.log(err)
-                res.render("register")
-            });
-        }
-    }).catch(err=>{
-        console.log(err);
-        res.render("register");
-    });    
+//             }).catch(err=>{
+//                 console.log(err)
+//                 res.render("register")
+//             });
+//         }
+//     }).catch(err=>{
+//         console.log(err);
+//         res.render("register");
+//     });    
         
     
+// });
+
+
+app.post("/register", upload.single("profile_picture"), formVailidation, async function(req, res) {
+    if (req.session.user) {
+        return res.redirect("/profile");
+    }
+    if(!req.file){res.render("register")}
+
+    try {
+        const passwordHash = await createHash(req.body.password);
+
+        const user = {
+            username: req.body.username,
+            name: req.body.name,
+            email: req.body.email,
+            mobile_number: req.body.mobile_number,
+            password_hash: passwordHash,
+            profile_picture_url: req.file ? `/uploads/profile_pictures/${req.file.filename}` : null
+        };
+
+        const foundUser = await Users.findOne({ mobile_number: req.body.mobile_number });
+        if (foundUser) {
+            return res.send("Mobile number is already in use.");
+        }
+
+        const newUser = await Users.create(user);
+        console.log(newUser);
+        res.redirect("/login");
+
+    } catch (err) {
+        console.error(err);
+        res.render("register");
+    }
 });
+
+
 
 
 app.post("/login", async function(req, res) {
