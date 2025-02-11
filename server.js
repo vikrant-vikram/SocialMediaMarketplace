@@ -351,6 +351,8 @@ app.get('/user/:username', isLoggedIn, async (req, res) => {
     }
 });
 
+
+
 app.get("/follow/:username", isLoggedIn, async (req, res) => {
     try {
         const currentUser = req.session.user; // Logged-in user
