@@ -16,41 +16,43 @@
 
 
 
-<div class="margin-top-1">
-    <div class="box-form ">
-        <div class="left">
-            <div class="overlay">
-            <h1>Hello There.</h1>
-            <p>Welcome back, Lets do some business.</p>
-            <span>
-                <p>Our social media</p>
-                <a href="http://instagram.com/bikrant_bikram/"><i class="fa fa-facebook" aria-hidden="true"></i>instagram</a>
-                <a href="http://instagram.com/bikrant_bikram/"><i class="fa fa-twitter" aria-hidden="true"></i> Twitter</a>
-            </span>
+    <div class="margin-top-1">
+        <div class="box-form ">
+            <div class="left">
+                <div class="overlay">
+                <h1>Hello There.</h1>
+                <p>Welcome back, Lets do some business.</p>
+                <span>
+                    <p>Our social media</p>
+                    <a href="http://instagram.com/bikrant_bikram/"><i class="fa fa-facebook" aria-hidden="true"></i>instagram</a>
+                    <a href="http://instagram.com/bikrant_bikram/"><i class="fa fa-twitter" aria-hidden="true"></i> Twitter</a>
+                </span>
+                </div>
             </div>
+            
+            
+                <div class="right">
+                <!-- <h5>Login</h5> -->
+                <p>Don't have an account? <a href="/register">Creat Your Account</a> it takes less than a minute</p>
+                <form action="/login" method="post">
+                    <div class="inputs">
+                        <input type="text" placeholder="Contact Number" id="contact" name="mobile_number" required>
+                        <input type="password" placeholder="Password" id="password" name = "password" required>
+                    </div>
+                        
+                        <br><br>
+                        
+                    <div class="remember-me--forget-password">
+                        <p>forget password?</p>
+                    </div>
+                    <br>
+                    <button type="submit">Login</button>
+                </form>
+            </div>
+            
         </div>
-        
-        
-            <div class="right">
-            <!-- <h5>Login</h5> -->
-            <p>Don't have an account? <a href="/register">Creat Your Account</a> it takes less than a minute</p>
-            <form action="/login" method="post">
-                <div class="inputs">
-                    <input type="text" placeholder="Contact Number" id="contact" name="mobile_number" required>
-                    <input type="password" placeholder="Password" id="password" name = "password" required>
-                </div>
-                    
-                    <br><br>
-                    
-                <div class="remember-me--forget-password">
-                    <p>forget password?</p>
-                </div>
-                <br>
-                <button type="submit">Login</button>
-            </form>
-        </div>
-        
     </div>
-</div>
 
+
+<%- include('parcials/footer') %>
 

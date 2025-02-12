@@ -1,78 +1,70 @@
 <%- include('parcials/before_import') %>
 
-		<link rel="stylesheet" href="/css/search.css" />
+<link rel="stylesheet" href="/css/search.css" />
 
-		<!-- locomotive-scroll -->
-		<link
-			rel="stylesheet"
-			href="https://cdn.jsdelivr.net/npm/locomotive-scroll@3.2.5/dist/locomotive-scroll.min.css"
-		/>
-		<script src="https://cdn.jsdelivr.net/npm/locomotive-scroll@3.2.5/dist/locomotive-scroll.min.js"></script>
+<!-- locomotive-scroll -->
+<link
+	rel="stylesheet"
+	href="https://cdn.jsdelivr.net/npm/locomotive-scroll@3.2.5/dist/locomotive-scroll.min.css"
+/>
+<script src="https://cdn.jsdelivr.net/npm/locomotive-scroll@3.2.5/dist/locomotive-scroll.min.js"></script>
 <%- include('parcials/after_import') %>
+<!-- navbar -->
+<%- include('parcials/nav') %>
+<!-- navbar -->
 
+	<div class='search_con'>
+		<form action="/search" method="get" class="input_con">
+			<input type="text" placeholder='Search for Query...' spellCheck="false" id="queryFind"/>
+			<span id="clearBtn"><i class="bi bi-x-lg"></i></span>
+			<span class='h-line'></span>
+			<a href="https://t.me/rawnge" target="_blank">
+			<span><i class="bi bi-search"></i></span>
+			</a>
+		</form>
+	</div>
 
-	<body id="js-scroll">
-		<div class="wrapper">
-			<div class="container">
+	<div class="divider"></div>
 
-				<!-- navbar -->
-                <%- include('parcials/nav') %>
-                <!-- navbar -->
+	<section class="project">
+		<div class="project-container">
+			<div>
+				<nav class="menu">
+					<% users.forEach(user => { %>
+						<div class="menu__item">
+							<a class="menu__item-link" href="/user/<%= user.username %>">/ <%= user.name || user.username %></a>
+							
+							<!-- Display profile picture or default image -->
+							<img class="menu__item-img" src="<%= user.profile_picture_url ? user.profile_picture_url : '/images/default-avatar.png' %>" alt="<%= user.username %>" />
 
-				<div class='search_con'>
-					<form action="/search" method="get" class="input_con">
-					  <input type="text" placeholder='Search for Query...' spellCheck="false" id="queryFind"/>
-					  <span id="clearBtn"><i class="bi bi-x-lg"></i></span>
-					  <span class='h-line'></span>
-					  <a href="https://t.me/rawnge" target="_blank">
-					  <span><i class="bi bi-search"></i></span>
-					  </a>
-					</form>
-				  </div>
-
-				<div class="divider"></div>
-
-				<section class="project">
-					<div class="project-container">
-						<div>
-							<nav class="menu">
-								<% users.forEach(user => { %>
-									<div class="menu__item">
-										<a class="menu__item-link" href="/user/<%= user.username %>">/ <%= user.name || user.username %></a>
-										
-										<!-- Display profile picture or default image -->
-										<img class="menu__item-img" src="<%= user.profile_picture_url ? user.profile_picture_url : '/images/default-avatar.png' %>" alt="<%= user.username %>" />
-
-										<div class="marquee">
-											<div class="marquee__inner">
-												<span><%= user.username %></span>
-												<span><%= user.username %></span>
-												<span><%= user.username %></span>
-												<span><%= user.username %></span>
-											</div>
-										</div>
-									</div>
-									<div class="divider"></div>
-								<% }) %>
-							</nav>
+							<div class="marquee">
+								<div class="marquee__inner">
+									<span><%= user.username %></span>
+									<span><%= user.username %></span>
+									<span><%= user.username %></span>
+									<span><%= user.username %></span>
+								</div>
+							</div>
 						</div>
-					</div>
-
-				</section>
-
-				<div class="whitespace"></div>
-
+						<div class="divider"></div>
+					<% }) %>
+				</nav>
 			</div>
 		</div>
 
-		<script>
-			const scroll = new LocomotiveScroll({
-				el: document.querySelector("#js-scroll"),
-				smooth: true,
-				smoothMobile: true,
-				inertia: 0.50,
-			});
-		</script>
-        <script src="/script/scroll.js"></script>
-	</body>
-</html>
+	</section>
+
+	<div class="whitespace"></div>
+
+
+	<script>
+		const scroll = new LocomotiveScroll({
+			el: document.querySelector("#js-scroll"),
+			smooth: true,
+			smoothMobile: true,
+			inertia: 0.50,
+		});
+	</script>
+    <script src="/script/scroll.js"></script>
+<%- include('parcials/footer') %>
+
