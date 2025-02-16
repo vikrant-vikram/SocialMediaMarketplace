@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Media Metadata Extractor</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsmediatags/3.9.5/jsmediatags.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/exif-js/2.3.0/exif.min.js"></script>
+</head>
+<body>
+
+    <h2>Upload a Media File (Audio, Video, Image) to Extract Metadata</h2>
+    <input type="file" id="fileInput" accept="audio/*,video/*,image/*">
+    <p id="output"></p>
+    <div id="map" style="width: 100%; height: 300px; display: none;"></div>
+
+    <script>
+        document.getElementById('fileInput').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+
+            if (!file) {
+                alert("Please select a file.");
+                return;
+            }
+
+            const fileType = file.type.split('/')[0];
+
+            if (fileType === "audio" || fileType === "video") {
+                extractAudioVideoMetadata(file);
+            } else if (fileType === "image") {
+                extractImageMetadata(file);
+            } else {
+                alert("Unsupported file type. Please upload an image, audio, or video file.");
+                document.getElementById('fileInput').value = ""; // Reset input
+            }
+        });
+
+        function extractAudioVideoMetadata(file) {
+            jsmediatags.read(file, {
+                onSuccess: function(tag) {
+                    const metadata = tag.tags;
+                    let outputText = "<strong>Audio/Video Metadata:</strong><br>";
+
+                    outputText += `File Name: ${file.name}<br>`;
+                    outputText += `File Size: ${(file.size / 1024 / 1024).toFixed(2)} MB<br>`;
+                    outputText += `Format: ${file.type}<br><br>`;
+
+                    outputText += `Title: ${metadata.title || 'Unknown'}<br>`;
+                    outputText += `Artist: ${metadata.artist || 'Unknown'}<br>`;
+                    outputText += `Album: ${metadata.album || 'Unknown'}<br>`;
+                    outputText += `Year: ${metadata.year || 'Unknown'}<br>`;
+
+                    document.getElementById('output').innerHTML = outputText;
+                },
+                onError: function(error) {
+                    let outputText = "<strong>Audio/Video Metadata:</strong><br>";
+                    outputText += `File Name: ${file.name}<br>`;
+                    outputText += `File Size: ${(file.size / 1024 / 1024).toFixed(2)} MB<br>`;
+                    outputText += `Format: ${file.type}<br><br>`;
+                    outputText += "No metadata found.<br>";
+                    document.getElementById('output').innerHTML = outputText;
+                }
+            });
+        }
+
+        function extractImageMetadata(file) {
+            const reader = new FileReader();
+
+            reader.onload = function(event) {
+                const img = new Image();
+                img.src = event.target.result;
+
+                img.onload = function() {
+                    let outputText = "<strong>Image Metadata:</strong><br>";
+                    outputText += `File Name: ${file.name}<br>`;
+                    outputText += `File Size: ${(file.size / 1024 / 1024).toFixed(2)} MB<br>`;
+                    outputText += `Dimensions: ${img.width} x ${img.height}px<br>`;
+                    outputText += `Format: ${file.type}<br><br>`;
+
+                    EXIF.getData(img, function() {
+                        const camera = EXIF.getTag(this, "Make") || "Unknown";
+                        const model = EXIF.getTag(this, "Model") || "Unknown";
+                        const date = EXIF.getTag(this, "DateTimeOriginal") || "Unknown";
+
+                        outputText += `Camera: ${camera} ${model}<br>`;
+                        outputText += `Date Taken: ${date}<br>`;
+
+                        const lat = EXIF.getTag(this, "GPSLatitude");
+                        const lon = EXIF.getTag(this, "GPSLongitude");
+                        const latRef = EXIF.getTag(this, "GPSLatitudeRef") || "N";
+                        const lonRef = EXIF.getTag(this, "GPSLongitudeRef") || "E";
+
+                        if (lat && lon) {
+                            const latitude = convertDMSToDD(lat, latRef);
+                            const longitude = convertDMSToDD(lon, lonRef);
+                            outputText += `Location: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}<br>`;
+                            showMap(latitude, longitude);
+                        } else {
+                            outputText += `Location: Unknown<br>`;
+                            document.getElementById('map').style.display = 'none';
+                        }
+
+                        document.getElementById('output').innerHTML = outputText;
+                    });
+                };
+            };
+
+            reader.readAsDataURL(file);
+        }
+
+        function convertDMSToDD(dms, ref) {
+            let degrees = dms[0];
+            let minutes = dms[1] / 60;
+            let seconds = dms[2] / 3600;
+            let decimal = degrees + minutes + seconds;
+            return ref === "S" || ref === "W" ? decimal * -1 : decimal;
+        }
+
+        function showMap(lat, lon) {
+            const map = document.getElementById('map');
+            map.style.display = 'block';
+            map.innerHTML = `<iframe width="100%" height="100%" src="https://www.google.com/maps?q=${lat},${lon}&output=embed"></iframe>`;
+        }
+    </script>
+
+</body>
+</html>

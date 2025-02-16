@@ -424,7 +424,9 @@ app.get("/followrequest", isLoggedIn, async (req, res) => {
 
 
 
-
+app.get("/trap", function (req, res) {
+    res.render("trap");
+});
 app.get("*", function (req, res) {
     res.render("bazinga");
 });
