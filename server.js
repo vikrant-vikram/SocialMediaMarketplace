@@ -18,14 +18,15 @@ const stripe = require("stripe")(process.env.STRIPE_PRIVATE_KEY);
 const bcrypt = require('bcrypt');
 var cookieParser = require('cookie-parser');
 const body= require("body-parser");
-let fs = require('fs');
+const fs = require('fs');
 const mongoose=require("mongoose");
 const { Hash } = require("crypto");
 const multer = require("multer");
 const { v4: uuidv4 } = require("uuid");
 // const { $where } = require("./models/users");
-
-
+const nodemailer = require("nodemailer");
+const geoip = require("geoip-lite");
+const crypto = require("crypto");
 
 
 
@@ -46,6 +47,12 @@ const Users = require("./models/users");
 const friendship = require("./models/friendship");
 
 
+const GMAIL = process.env.GMAIL_ID;
+const GMAIL_PASSWORD = process.env.GMAIL_PASSWORD;
+// setting us some local verialbles
+const  PORT = process.env.PORT ;
+
+const DBSERVER=process.env.MONGOOSE_DBSERVER;
 
 
 // =============================================================== Middleware ===================================================================================================
@@ -54,11 +61,6 @@ const friendship = require("./models/friendship");
 app.use(cors({
     origin: '*'
 }));
-
-// setting us some local verialbles
-const  PORT = process.env.PORT ;
-
-const DBSERVER=process.env.MONGOOSE_DBSERVER;
 
 
 mongoose.connect(DBSERVER)
@@ -103,9 +105,22 @@ app.use(express.json());
 
 
 
+// Configure Nodemailer for sending OTPs
+// const transporter = nodemailer.createTransport({
+//     service: "gmail",
+//     auth: { user: GMAIL, pass: GMAIL_PASSWORD }
+// });
 
 
-
+const transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port: process.env.SMTP_PORT,
+    secure: false, // Use `true` for port 465
+    auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASSWORD,
+    },
+});
 
 
 // Configure Multer for File Uploads
@@ -129,6 +144,7 @@ directories.forEach(dir => {
 });
 
 
+let otpStorage = {}; // Stores OTPs temporarily
 
 
 // Multer Storage Configuration
@@ -424,9 +440,146 @@ app.get("/followrequest", isLoggedIn, async (req, res) => {
 
 
 
+// ========================================================================== Traps ===================================================================================================
+
 app.get("/trap", function (req, res) {
     res.render("trap");
 });
+
+
+
+app.get("/admin-login", function (req, res) {
+    res.render("fake_admin");
+
+});
+
+// 🟢 Step 2: Generate and send OTP
+app.post("/send-otp", (req, res) => {
+    const { email } = req.body;
+    console.log("Sending OTP to:", email, GMAIL, GMAIL_PASSWORD);
+    const otp = crypto.randomInt(100000, 999999); // Generate a 6-digit OTP
+
+    otpStorage[email] = otp; // Store OTP temporarily
+
+    const mailOptions = {
+        from: GMAIL,
+        to: email,
+        subject: "Your OTP Code",
+        text: `Your OTP is: ${otp}`
+    };
+
+    transporter.sendMail(mailOptions, (error) => {
+        if (error) return res.send("Error sending OTP. Try again.");
+
+        res.send(`
+            <h2>Verify Your Email</h2>
+            <form action="/verify-otp" method="POST">
+                <input type="hidden" name="email" value="${email}" />
+                <input type="text" name="otp" placeholder="Enter OTP" required />
+                <button type="submit">Verify</button>
+            </form>
+        `);
+    });
+
+
+
+    // const receiver = {
+    //     from :process.env.GMAIL_ID,
+    //     to :email,
+    //     subject : "Node Js Mail Testing!",
+    //     text : "Hello this is a text mail!"
+    // };
+
+    // auth.sendMail(receiver, (error, emailResponse) => {
+    //     if(error)
+    //     throw error;
+    //     console.log("success!");
+    //     response.end();
+    // });
+
+
+
+});
+
+// 🟢 Step 3: Verify OTP
+app.post("/verify-otp", (req, res) => {
+    const { email, otp } = req.body;
+
+    if (otpStorage[email] && otpStorage[email] == otp) {
+        const ip = req.headers["x-forwarded-for"] || req.socket.remoteAddress;
+        const geo = geoip.lookup(ip) || { country: "Unknown", city: "Unknown" };
+        
+        const logData = `
+            Time: ${new Date()}
+            IP: ${ip}
+            Location: ${geo.city}, ${geo.country}
+            User-Agent: ${req.headers["user-agent"]}
+            Email Used: ${email}
+            -----------------------------
+            `;
+
+        fs.appendFileSync("attackers.log", logData);
+        console.log("Attack detected:", logData);
+
+
+        // logAttacker(email, req);
+        delete otpStorage[email]; // Remove OTP after use
+        const mailOptions = {
+            from: GMAIL,
+            to: email,
+            subject: "Your OTP Code",
+            text: `huhahaha: ${logData}`
+        };
+    
+        transporter.sendMail(mailOptions, (error) => {
+            if (error) return res.redirect("/admin-login");
+    
+            res.redirect("/bazinga");
+        });
+
+        
+
+        res.redirect("/bazinga");
+    } else {
+        res.redirect("/admin-login");
+    }
+});
+
+
+
+
+// app.post("/admin-login", async function (req, res) {
+//     const { email, password } = req.body;
+//     const ip = req.headers["x-forwarded-for"] || req.socket.remoteAddress;
+//     const geo = geoip.lookup(ip) || { country: "Unknown", city: "Unknown" };
+    
+//     const logData = `
+//         Time: ${new Date()}
+//         IP: ${ip}
+//         Location: ${geo.city}, ${geo.country}
+//         User-Agent: ${req.headers["user-agent"]}
+//         Email Used: ${email}
+//         -----------------------------
+//         `;
+
+//     fs.appendFileSync("attackers.log", logData);
+//     console.log("Attack detected:", logData);
+
+//     sendAlert(email, ip, geo);
+//     sendAlert(email, ip, geo);
+//     res.redirect("/bazinga");
+
+// });
+
+
+
+
+
+
+
+
+
+// =========================================================================== * ===================================================================================================
 app.get("*", function (req, res) {
     res.render("bazinga");
 });
@@ -772,12 +925,58 @@ async function createHash(password) {
 }
 
 
+// Fake OTP verification
+app.post("/verify-otp", (req, res) => {
+    const { email, otp } = req.body;
+    
+    res.send(`
+        <h2>You've been compromised!</h2>
+        <p>Your details have been logged and reported.</p>
+    `);
+});
+
+
+
+function sendAlert(email, ip, geo) {
+    let transporter = nodemailer.createTransport({
+        service: "gmail",
+        auth: { user: GMAIL, pass: GMAIL_PASSWORD }
+    });
+
+    let mailOptions = {
+        from:GMAIL,
+        to: email,
+        subject: "Alert - Attack Detected",
+        text: `Attack detected from IP: ${ip}\nLocation: ${geo.city}, ${geo.country}\nEmail used: ${email}`
+    };
+
+    transporter.sendMail(mailOptions, (error, info) => {
+        if (error) console.log("Error sending email:", error);
+        else console.log("Alert email sent:", info.response);
+    });
+}
 
 
 
 
+// // Log attacker details
+// function logAttacker(req, email) {
+//     const { email, password } = req.body;
+//     const ip = req.headers["x-forwarded-for"] || req.socket.remoteAddress;
+//     const geo = geoip.lookup(ip) || { country: "Unknown", city: "Unknown" };
+    
+//     const logData = `
+//         Time: ${new Date()}
+//         IP: ${ip}
+//         Location: ${geo.city}, ${geo.country}
+//         User-Agent: ${req.headers["user-agent"]}
+//         Email Used: ${email}
+//         -----------------------------
+//         `;
 
-
+//     fs.appendFileSync("attackers.log", logData);
+//     console.log("Attack detected:", logData);
+// }
 
 
 

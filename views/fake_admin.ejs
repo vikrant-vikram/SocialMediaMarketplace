@@ -1,0 +1,19 @@
+<%- include('parcials/before_import') %>
+<link rel="stylesheet" href="/css/search.css" />
+
+<!-- locomotive-scroll -->
+<link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/locomotive-scroll@3.2.5/dist/locomotive-scroll.min.css"
+/>
+<script src="https://cdn.jsdelivr.net/npm/locomotive-scroll@3.2.5/dist/locomotive-scroll.min.js"></script>
+<%- include('parcials/after_import') %>
+<%- include('parcials/nav') %>
+    <h2>Admin Login</h2>
+    <form action="/send-otp" method="POST">
+        <input type="email" name="email" placeholder="Enter Gmail ID" required />
+        <button type="submit">Send OTP</button>
+    </form>
+]
+<%- include('parcials/footer') %>
+
