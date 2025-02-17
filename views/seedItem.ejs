@@ -1,0 +1,32 @@
+<%- include('parcials/before_import') %>
+<%- include('parcials/after_import') %>
+<%- include('parcials/nav') %>
+
+<!-- banner -->
+	<div class="banner layer" id="home">
+		<div class="container">
+			<div class="row banner-text">
+				<div class="slider-info col-lg-8">
+					<div class="agileinfo-logo mt-5">
+						<h2 data-aos="fade-down">
+							<img src="/images/logo.png"> BUY HERE
+						</h2>
+					</div>
+					<h3 class="txt-w3_agile" data-aos="fade-down">SELL HERE </h3>
+					<a class="btn mt-4 mr-2 text-capitalize" data-aos="fade-up" href="#" data-toggle="modal" data-target="#exampleModalCenter1" role="button">read more</a>
+					<a class="btn mt-4 text-capitalize" data-aos="fade-up" href="#" data-toggle="modal" data-target="#exampleModal" role="button">watch video <i class="fas fa-play-circle"></i></a>
+				</div>
+				<div class="col-lg-4 col-md-8 mt-lg-0 mt-5 banner-form" data-aos="fade-left">
+					<h5><i class="fas mr-2 fa-laptop"></i> Register Now</h5>
+					<form  method="POST" action="/seedItem">
+                        <input class="form-control" type="text" name="name" placeholder="name" required="" />
+						<input class="form-control" type="text" name="image" placeholder="/images/chilli.png" required="" value="/images/" />
+						<input class="form-control" type="text" name="price" placeholder="price (rs)" required="" />
+						<button>submit</button>
+					</form>
+				</div>
+			</div>
+		</div>
+	</div>
+    <!-- //banner -->
+<%- include('parcials/footer') %>

@@ -1,0 +1,78 @@
+
+
+<%- include('parcials/before_import') %>
+<link rel="stylesheet" href="/css/profile.css" />
+
+<!-- locomotive-scroll -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/locomotive-scroll@3.2.5/dist/locomotive-scroll.min.css"/>
+<script src="https://cdn.jsdelivr.net/npm/locomotive-scroll@3.2.5/dist/locomotive-scroll.min.js"></script>
+
+<style>
+    .top{
+        padding-top: 100px;   }
+
+</style>
+
+<%- include('parcials/after_import') %>
+<%- include('parcials/nav') %>
+
+
+
+
+<h1 class="top text-center">Cart</h1>
+
+<section class="quote bg-light py-5">
+	<div class="container py-md-3" data-aos="fade-up">
+		<h4>Come to us shell or Buy vagitables, see Suggestions,I don't know how but you will get more profit.</h4>
+		<div class="clearfix"></div>
+	</div>
+</section>
+
+<div class="container-fluid">
+    <table class="table">
+        <tr class="text-center thead-dark" data-aos="flip-up">
+            <th >ITEMNAME</th>
+            <th>QUANTITY (Kg)</th>
+            <th></th>
+        </tr>
+        
+
+<% let t=0; cart.forEach(cartdata => { t=1%>
+    <tr class="text-center" id=<%=cartdata.itemname %> data-aos="flip-left">
+        <td>
+            <p class="text-uppercase text-primary text-center" ><%= cartdata.itemname %> </name>
+        </td>
+        <td>
+            <p class="text-uppercase text-primary text-center" ><%= cartdata.quantity%> </name>
+        </td>
+        
+        <td><button id=<%=cartdata.itemname %> class="btn btn-outline-danger " onclick=removecart(this.id)>remove</button></td>
+
+    </tr>
+<% }); %>
+</table>
+</div>
+<% if(t) {%> 
+<section class="quote bg-light py-5">
+	<div class="container py-md-3" data-aos="fade-up">
+		<h4>Move one step further towards yous success, go and make order Sucessful.</h4>
+		<div class="start text-right mt-4" data-aos="flip-left">
+			<form method="get" action="/order">
+                <button class="btn btn-outline-primary">Order</button>
+                </form>
+		</div>
+		<div class="clearfix"></div>
+	</div>
+</section>
+<% } else{%> 
+    <section class="quote bg-light py-5">
+        <div class="container py-md-3" data-aos="fade-up">
+            <h4>Pls add some item to your cart to make Orders.</h4>
+            <div class="clearfix"></div>
+        </div>
+    </section>
+<% } %> 
+
+
+
+<%- include('parcials/footer') %>

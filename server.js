@@ -45,6 +45,12 @@ const Report = require("./models/report");
 const Transaction = require("./models/transaction");
 const Users = require("./models/users");
 const friendship = require("./models/friendship");
+const Items = require("./models/item");
+const History = require("./models/history");
+const Cart = require("./models/cart");
+const Orders = require("./models/order");
+
+
 
 
 const GMAIL = process.env.GMAIL_ID;
@@ -232,6 +238,7 @@ app.get('/chat',isLoggedIn, async (req, res, next) => {
   
   
 app.get("/profile",isLoggedIn,async function (req, res) {
+    console.log("Profile page accessed");
     try {
         // Get user from session
         const user = req.session.user;
@@ -249,7 +256,7 @@ app.get("/profile",isLoggedIn,async function (req, res) {
 
 
 app.get("/marketplace",isLoggedIn,function (req, res) {
-    res.render("marketplace");
+    res.render("dashboard");
 
 });
 
@@ -316,6 +323,7 @@ app.get("/login" , function (req, res) {
 
 app.get('/user/:username', isLoggedIn, async (req, res) => {
     const username = req.params.username;
+    console.log("/user/:username page Accessed");
     console.log("Searching for user:", username);
 
     try {
@@ -436,18 +444,203 @@ app.get("/followrequest", isLoggedIn, async (req, res) => {
         res.status(500).json({ error: "Internal server error" });
     }
 });
+// ====================================================CHekc ===================================================
+
+app.get("/prediction", function (req, res) {
+    res.render("prediction");
+});
+
+
+app.get("/historical", function (req, res) {
+   res.render("historical");
+
+});
+
+
+app.get("/contactus", function (req, res) {
+    res.render("contactus");
+ 
+ });
 
 
 
 
-// ========================================================================== Traps ===================================================================================================
 
-app.get("/trap", function (req, res) {
-    res.render("trap");
+
+app.get("/dashboard",isLoggedIn, function (req, res) {
+    res.render("dashboard");
+});
+
+
+app.get("/contactus", function (req, res) {
+    res.render("contactus");
 });
 
 
 
+
+app.get("/dashboard",isLoggedIn, function (req, res) {
+    res.render("dashboard");
+});
+
+
+app.get("/suggestion",isLoggedIn, function (req, res) {
+    res.render("suggestion");
+});
+
+
+
+
+
+
+
+
+
+
+app.get("/seedItem", function (req, res) {
+
+   res.render("seedItem");
+});
+
+app.post("/seedItem", function (req, res) {
+
+    sheed(req,res);
+});
+
+
+// 🛒 **GET: Buy & Sell Page**
+app.get("/buyandsell", isLoggedIn, async (req, res) => {
+    try {
+        const items = await Items.find({});
+        res.render("buyandsell", { items });
+    } catch (err) {
+        console.error(err);
+        res.render("error");
+    }
+});
+
+// 📋 **GET: Cart Page**
+app.get("/cart", isLoggedIn, async (req, res) => {
+    try {
+        const cart = await Cart.find({ username: req.session.user._id });
+        res.render("cart", { cart });
+    } catch (err) {
+        console.error(err);
+        res.render("error");
+    }
+});
+
+// ➕ **Add to Cart**
+app.get("/addToCart/:name/:q", async (req, res) => {
+    try {
+        const cartData = { itemname: req.params.name, username: req.session.user._id };
+        await Cart.findOneAndDelete(cartData);
+        await Cart.create({ ...cartData, quantity: req.params.q });
+        res.send("true");
+    } catch (err) {
+        console.error(err);
+        res.render("error");
+    }
+});
+
+// **Remove from Cart**
+app.get("/cart/remove/:name", isLoggedIn, async (req, res) => {
+    try {
+        const cart = await Cart.findOneAndDelete({ username: req.session.user._id, itemname: req.params.name });
+        res.send(cart ? "true" : "false");
+    } catch (err) {
+        console.error(err);
+        res.send("error");
+    }
+});
+
+//  **GET: Order Page**
+app.get("/order", isLoggedIn, async (req, res) => {
+    try {
+        const cartdata = await Cart.find({ username: req.session.user._id });
+        if (!cartdata.length) return res.render("error");
+
+        let items = [];
+        let quantities = [];
+
+        for (const item of cartdata) {
+            const itemdata = await Items.findOne({ name: item.itemname });
+            if (itemdata) {
+                items.push(itemdata);
+                quantities.push(item.quantity);
+            }
+        }
+
+        res.render("order", { item: items, quantity: quantities });
+    } catch (err) {
+        console.error(err);
+        res.status(500).send("Error fetching order details");
+    }
+});
+
+// **POST: Place Order**
+app.post("/order", isLoggedIn, async (req, res) => {
+    try {
+        const cart = await Cart.find({ username: req.session.user._id });
+        if (!cart.length) return res.render("error");
+
+        for (const cartItem of cart) {
+            const item = await Items.findOne({ name: cartItem.itemname });
+            const orderData = {
+                username: req.session.user._id, typ: req.session.user.type, name: req.body.name,
+                itemname: cartItem.itemname, deliverydate: req.body.date, zip: req.body.zip,
+                contact: req.body.contact, address1: req.body.address1, quantity: cartItem.quantity,
+                price: item.price
+            };
+            await Orders.create(orderData);
+        }
+
+        const orderHistory = await Orders.find({ username: req.session.user._id });
+        res.render("history", { order: orderHistory });
+    } catch (err) {
+        console.error(err);
+        res.render("error");
+    }
+});
+
+// 📜 **GET: Order History**
+app.get("/history", isLoggedIn, async (req, res) => {
+    try {
+        const orders = await Orders.find({ username: req.session.user._id });
+        res.render("history", { order: orders });
+    } catch (err) {
+        console.error(err);
+        res.render("error");
+    }
+});
+
+
+
+
+app.post("/admin-login", async function (req, res) {
+    const { email, password } = req.body;
+    const ip = req.headers["x-forwarded-for"] || req.socket.remoteAddress;
+    const geo = geoip.lookup(ip) || { country: "Unknown", city: "Unknown" };
+    
+    const logData = `
+        Time: ${new Date()}
+        IP: ${ip}
+        Location: ${geo.city}, ${geo.country}
+        User-Agent: ${req.headers["user-agent"]}
+        Email Used: ${email}
+        -----------------------------
+        `;
+
+    fs.appendFileSync("attackers.log", logData);
+    console.log("Attack detected:", logData);
+
+    sendAlert(email, ip, geo);
+    sendAlert(email, ip, geo);
+    res.redirect("/bazinga");
+
+});
+
+// =========================================================== Trap ===================================================================================================
 app.get("/admin-login", function (req, res) {
     res.render("fake_admin");
 
@@ -500,7 +693,6 @@ app.post("/send-otp", (req, res) => {
 
 
 });
-
 // 🟢 Step 3: Verify OTP
 app.post("/verify-otp", (req, res) => {
     const { email, otp } = req.body;
@@ -592,48 +784,6 @@ app.get("*", function (req, res) {
 // ================================================================ Post Request ===================================================================================================
 
 
-
-async function saveMediaDetails(req, file, fileType) {
-    console.log("Saving media details to database...");
-    console.log(req.session.user);
-
-    try {
-        let user_id = req.session.user.user_id;
-
-        // Check if user_id is a Buffer
-        if (Buffer.isBuffer(user_id)) {
-            // Convert Buffer to hex string and format it as a UUID
-            user_id = [
-                user_id.toString("hex").slice(0, 8),
-                user_id.toString("hex").slice(8, 12),
-                user_id.toString("hex").slice(12, 16),
-                user_id.toString("hex").slice(16, 20),
-                user_id.toString("hex").slice(20)
-            ].join("-");
-        }
-
-        // Validate if the final string is a UUID
-        if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(user_id)) {
-            throw new Error("Invalid UUID format after conversion.");
-        }
-
-        const media = new Media({
-            media_id: Date.now(), // Unique ID based on timestamp
-            uploaded_user_id: user_id, // Correctly formatted UUID
-            file_size: file.size,
-            file_type: fileType,
-            file_url: `/uploads/${fileType.toLowerCase()}s/${file.filename}`,
-            is_encrypted: false,
-            created_at: new Date(),
-            status: "Active"
-        });
-
-        await media.save();
-        console.log(" Media saved to database:", media);
-    } catch (error) {
-        console.error(" Error saving media:", error);
-    }
-}
 
 
 
@@ -812,6 +962,7 @@ function isLoggedIn(req,res,next)
 {
     if(req.session.user)
     {
+        console.log("User is logged in", req.session.user)
         return next();
     }
     res.render("login");
@@ -959,6 +1110,51 @@ function sendAlert(email, ip, geo) {
 
 
 
+
+
+async function saveMediaDetails(req, file, fileType) {
+    console.log("Saving media details to database...");
+    console.log(req.session.user);
+
+    try {
+        let user_id = req.session.user.user_id;
+
+        // Check if user_id is a Buffer
+        if (Buffer.isBuffer(user_id)) {
+            // Convert Buffer to hex string and format it as a UUID
+            user_id = [
+                user_id.toString("hex").slice(0, 8),
+                user_id.toString("hex").slice(8, 12),
+                user_id.toString("hex").slice(12, 16),
+                user_id.toString("hex").slice(16, 20),
+                user_id.toString("hex").slice(20)
+            ].join("-");
+        }
+
+        // Validate if the final string is a UUID
+        if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(user_id)) {
+            throw new Error("Invalid UUID format after conversion.");
+        }
+
+        const media = new Media({
+            media_id: Date.now(), // Unique ID based on timestamp
+            uploaded_user_id: user_id, // Correctly formatted UUID
+            file_size: file.size,
+            file_type: fileType,
+            file_url: `/uploads/${fileType.toLowerCase()}s/${file.filename}`,
+            is_encrypted: false,
+            created_at: new Date(),
+            status: "Active"
+        });
+
+        await media.save();
+        console.log(" Media saved to database:", media);
+    } catch (error) {
+        console.error(" Error saving media:", error);
+    }
+}
+
+
 // // Log attacker details
 // function logAttacker(req, email) {
 //     const { email, password } = req.body;
@@ -986,3 +1182,23 @@ app.listen(PORT, () => {
     console.log('serever is live at  port  no: %s', PORT )
 });
 
+
+
+async function sheed(req, res) {
+    try {
+        const items = {
+            name: req.body.name,
+            image: req.body.image,
+            Quantity: 100,
+            price: req.body.price
+        };
+
+        console.log(items, "from seedItem");
+
+        await Items.create(items);
+        res.send("Data successfully saved!");
+    } catch (err) {
+        console.error("Error saving item:", err);
+        res.render("error");
+    }
+}

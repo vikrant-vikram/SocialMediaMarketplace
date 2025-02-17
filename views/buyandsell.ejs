@@ -1,0 +1,103 @@
+
+
+
+
+
+<%- include('parcials/before_import') %>
+
+<style>
+  .first{
+    padding-top: 100px;
+    padding-bottom: 30px;
+    
+  }
+
+</style>
+
+
+<%- include('parcials/after_import') %>
+<%- include('parcials/nav') %>
+
+
+
+
+
+<div class="first">
+  <h1 class="text-center"><u>AVAILIBILTY</u></h1>
+</div>
+<section class="quote bg-light py-5">
+	<div class="container py-md-3" data-aos="fade-up">
+		<h4>Come to us shell or Buy vagitables, see Suggestions,I don't know how but you will get more profit.</h4>
+		<div class="clearfix"></div>
+	</div>
+</section>
+
+<div class="container" >
+<% console.log(items.length);
+for(var i=0;i<items.length;i++){var item=items[i]; console.log("chloa");%> 
+<div class="row" >
+    <div class="col-lg-4 " >
+  <div class="card" style="width: 18rem;">
+    <img src="<%=item.image %> " class="card-img-top  img img-thumbnail" alt="..." style="height: 300px;">
+    <div class="card-body">
+      <p class="card-text text-uppercase text-primary text-center"><%=item.name %> </p>
+      <strong><p class="text-center text-body"><%=item.price %> rs/Kg</p></strong>
+      
+      <input id="<%=item.name+"q"%>"class="container" type="number" placeholder="kg" min="1" required="">
+      <button id="<%=item.name%>" class="btn btn-outline-primary container" onclick="addToCart(this.id)">Add to cart</button>
+      
+    </div>
+  </div>
+</div>
+
+<%
+i++;
+
+if(i<items.length){
+  var item=items[i];
+ %>
+
+<div class="col-lg-4">
+  <div class="card" style="width: 18rem;">
+    <img src="<%=item.image %> " class="card-img-top  img img-thumbnail" alt="..." style="height: 300px;">
+    <div class="card-body">
+      <p class="card-text text-uppercase text-primary text-center"><%=item.name %> </p>
+      <strong><p class="text-center text-body"><%=item.price %> rs/Kg</p></strong>
+      
+      <input id="<%=item.name+"q"%>"class="container" type="number" placeholder="kg" min="1" required="">
+      <button id="<%=item.name%>" class="btn btn-outline-primary container" onclick="addToCart(this.id)">Add to cart</button>
+    
+    </div>
+  </div>
+</div>
+
+<%
+i++;
+if(i<items.length)
+{
+var item=items[i];
+ %>
+
+<div class="col-lg-4">
+  <div class="card" style="width: 18rem;">
+    <img src="<%=item.image %> " class="card-img-top img img-thumbnail" alt="..." style="height: 300px;">
+    <div class="card-body">
+      <p class="card-text text-uppercase text-primary text-center"><%=item.name %> </p>
+      <strong><p class="text-center text-body"><%=item.price %> rs/Kg</p></strong>
+      
+      <input id="<%=item.name+"q"%>"class="container" type="number" placeholder="kg" min="1" required="">
+      <button id="<%=item.name%>" class="btn btn-outline-primary container" onclick="addToCart(this.id)">Add to cart</button>
+      
+    </div>
+  </div>
+</div>
+</div>
+
+
+    <%} }}%> 
+  </div>
+  </div>
+
+  <%- include('parcials/footer') %>
+    
+

@@ -1,0 +1,44 @@
+
+<%- include('parcials/before_import') %>
+<link rel="stylesheet" href="/css/profile.css" />
+<!-- locomotive-scroll -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/locomotive-scroll@3.2.5/dist/locomotive-scroll.min.css"/>
+<script src="https://cdn.jsdelivr.net/npm/locomotive-scroll@3.2.5/dist/locomotive-scroll.min.js"></script>
+
+<%- include('parcials/after_import') %>
+<%- include('parcials/nav') %>
+
+
+
+
+<div class="top text-center"> History</div>
+<div class="container">
+<table class="table text-center">
+    <tr>
+        <th>item</th>
+        <th>Reciever</th>
+        <th>Orderdate</th>
+        <th>for date</th>
+        <th>price</th>
+        <th>Quantity</th>
+        <th>address</th>
+    </tr>
+<% order.forEach(function(orderdata){%>
+
+    <tr>
+        <td><%=orderdata.itemname %> </td>
+        <td><%=orderdata.name %></td>
+        <td><%=orderdata.orderdate %></td>
+        <td><%=orderdata.deliverydate %></td>
+        <td><%=orderdata.price %></td>
+        <td><%=orderdata.quantity %></td>
+        <td><%=orderdata.address1 %></td>
+
+
+    </tr>
+
+<%  }) %> 
+</table>
+</div>
+
+<%- include('parcials/footer') %>

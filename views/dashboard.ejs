@@ -1,0 +1,126 @@
+
+<%- include('parcials/before_import') %>
+<link rel="stylesheet" href="/css/profile.css" />
+
+<!-- locomotive-scroll -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/locomotive-scroll@3.2.5/dist/locomotive-scroll.min.css"/>
+<script src="https://cdn.jsdelivr.net/npm/locomotive-scroll@3.2.5/dist/locomotive-scroll.min.js"></script>
+
+<style>
+    body{
+        background-color: burlywood;
+    }
+    .first
+    {
+        padding-top: 100px;
+    }
+</style>
+<link rel="stylesheet" type="text/css" href="css/demo.css" />
+<link rel="stylesheet" type="text/css" href="css/anime.css" />
+        <link rel="stylesheet" type="text/css" href="css/style_common.css" />
+        <link rel="stylesheet" type="text/css" href="css/style_common.css" />
+        <link rel="stylesheet" type="text/css" href="css/style8.css" />
+        <link href='http://fonts.googleapis.com/css?family=Oswald' rel='stylesheet' type='text/css' />
+
+
+
+<%- include('parcials/after_import') %>
+<%- include('parcials/nav') %>
+        
+        
+<div></div>
+
+
+
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!--
+    <div class="first container">
+        <div class="row">
+            <div class="col-lg-6">
+                <img src="//my.meteoblue.com/visimage/meteogram_web?look=KILOMETER_PER_HOUR%2CCELSIUS%2CMILLIMETER&apikey=5838a18e295d&temperature=C&windspeed=kmh&precipitationamount=mm&winddirection=3char&city=India&iso2=sv&lat=13.550000&lon=-88.816704&asl=481&tz=America%2FEl_Salvador&lang=en&sig=ed612cfa3315f359df551b22987099cf" srcset="//my.meteoblue.com/visimage/meteogram_web_hd?look=KILOMETER_PER_HOUR%2CCELSIUS%2CMILLIMETER&apikey=5838a18e295d&temperature=C&windspeed=kmh&precipitationamount=mm&winddirection=3char&city=India&iso2=sv&lat=13.550000&lon=-88.816704&asl=481&tz=America%2FEl_Salvador&lang=en&sig=6a9556e28e2b5b43994725ef2028afed 1.4x" alt="Meteogram - 5 days - India">
+            </div>
+            
+            <div class="col-lg-6">
+                <iframe src="https://www.meteoblue.com/en/weather/widget/three/india_el-salvador_3585481?geoloc=fixed&nocurrent=0&noforecast=0&days=4&tempunit=CELSIUS&windunit=KILOMETER_PER_HOUR&layout=image"  frameborder="0" scrolling="NO" allowtransparency="true" sandbox="allow-same-origin allow-scripts allow-popups allow-popups-to-escape-sandbox" style="width: 460px; height: 594px"></iframe>
+            </div>
+        </div>
+            <div id="chartContainer" style="height: 300px; width: 100%;"></div>
+    </div>
+    -->
+
+    <!--
+
+
+
+
+    -->
+
+    <div class="text-center container-fluid text-primary" style="background-color: rgb(21, 46, 1); margin-top: 5px;margin-bottom: 5px; border: solid white 2px;" data-aos="fade-up">
+        <h1>Available list</h1>
+
+    </div>
+
+
+    <div class="container container-fluid">
+            <!-- EIGHTH EXAMPLE -->
+        <% 
+        let a=["1.png","2.png","3.png","1.png","2.png","3.png","1.png","2.png","3.png"];
+        let title=["tomato","potato","chilli","tomato","potato","chilli","tomato","potato","chilli"]
+        console.log(a.length);
+        for(var i=0;i<=(a.length-3);i++) { 
+            var fname="images/"+a[i];
+            var sname="images/"+a[i+1];
+            var tname="images/"+a[i+2];
+            %>
+            <div class="row">
+                
+
+            <div class="container1 col-lg-4">
+                    <img src="<%=fname%>" alt="Avatar" class="image img-thumbnail">
+                    <div class="overlay">
+                    <div class="text1">
+                        <p class="text-white">Name:<%=title[i+1]%></p>
+                        <p>Price:<%=title[i+1]%></p>
+                        <p>Details:<%=fname%></p>
+                        </div>
+                </div>
+            </div>
+            <div class="container1 col-lg-4">
+                    <img src="<%=sname%>" alt="Avatar" class="image img-thumbnail">
+                    <div class="overlay">
+                    <div class="text1">
+                        <p class="text-white">Name : <%=title[i+1]%></p>
+                        <p>Price:<%=title[i+1]%></p>
+                        <p>Details:<%=sname%></p>
+                    </div>
+                    
+                </div>
+            </div>
+            <div class=" container1 col-lg-4">
+                    <img src="<%=tname%>" alt="Avatar" class="image img-thumbnail">
+                    <div class="overlay">
+                    <div class="text1">
+                        <p class="text-white">Name : <%=title[i+2]%></p>
+                        <p>Price:<%=title[i+2]%></p>
+                        <p>Details:<%=tname%></p>
+                        </div>
+                </div>
+            </div>
+        </div>
+            <% }%>
+        </div>
+<%- include("parcials/footer") %>

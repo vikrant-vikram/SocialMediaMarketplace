@@ -1,0 +1,36 @@
+
+<!-- banner -->
+	<div class="banner layer" id="home">
+		<div class="container">
+			<div class="row banner-text">
+				<div class="slider-info col-lg-8">
+					<div class="agileinfo-logo mt-5">
+						<h2 data-aos="fade-down">
+							<img src="/images/logo.png"> BUY HERE
+						</h2>
+					</div>
+					<h3 class="txt-w3_agile" data-aos="fade-down">SELL HERE </h3>
+					<a class="btn mt-4 mr-2 text-capitalize" data-aos="fade-up" href="#" data-toggle="modal" data-target="#exampleModalCenter1" role="button">read more</a>
+					<a class="btn mt-4 text-capitalize" data-aos="fade-up" href="#" data-toggle="modal" data-target="#exampleModal" role="button">watch video <i class="fas fa-play-circle"></i></a>
+				</div>
+				<div class="col-lg-4 col-md-8 mt-lg-0 mt-5 banner-form" data-aos="fade-left">
+					<h5><i class="fas mr-2 fa-laptop"></i> Register Now</h5>
+					<form  method="POST" action="/register">
+						<input class="form-control" type="text" name="username" placeholder="Name" required="" />
+						<input class="form-control" type="email" name="email" placeholder="Email" required="" />
+						<input class="form-control" type="password" name="password" placeholder="Password" required="" minlength="6"/>
+						<input class="form-control" type="text" name="contact_number" placeholder="Contact number (1234567890)" required="" minlength="10" maxlength="10" />
+						<input class="form-control" type="text" name="aadhar_number" placeholder="Aadhar number" required="" />
+						<input class="form-control" type="text" name="profile_pic" placeholder="profile pic link" required="" />
+						<input class="form-control" type="text" name="address" placeholder="address" required="" />
+						<div class="text-center bg-transparent text-white" style="margin-bottom: 10px;">
+						<input   type="radio" name="type" value="buyer" checked>Buyer
+						<input  type="radio" name="type" value="seller" >Seller
+						</div>
+						<button class=" form-control btn btn-primary">submit</button>
+					</form>
+				</div>
+			</div>
+		</div>
+	</div>
+    <!-- //banner -->

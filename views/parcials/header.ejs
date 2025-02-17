@@ -1,0 +1,105 @@
+
+	
+
+<!-- <header class="index-banner"> -->
+    <!-- nav -->
+    <!-- <nav class="main-header">
+      <div id="brand" data-aos="zoom-in-up">
+        <div id="logo1">
+          <a href="index.html">
+            <img src="/images/logo.png">
+          
+        </div>
+        <div id="word-mark">
+          <h1>
+            <a href="index.html">SocialHub</a>
+          </h1>
+        </div>
+      </div>
+      <div id="menu">
+        <div id="menu-toggle">
+          <div id="menu-icon">
+            <div class="bar"></div>
+            <div class="bar"></div>
+            <div class="bar"></div>
+          </div>
+        </div>
+        <ul class="text-center text-capitalize nav-agile" data-aos="zoom-in-up">
+            <li>
+              <a href="/" class="active">home</a>
+            </li>
+            <% if(!session.user) {%> 
+              <li>
+                <a href="/buyandsell">BUY/SELL</a>
+              </li>
+              <%}else{%>
+            <li>
+              <a href="/buyandsell"><%=session.user.type%></a>
+            </li>
+          <% } %> 
+            <li>
+              <a href="/dashboard" >Dash Board</a>
+            </li>
+            <li>
+              <a href="/cart">Cart</a>
+            </li>
+            <li>
+              <a href="/order">Order</a>
+            </li>
+            <li>
+              <a href="/history">history</a>
+            </li>
+      
+		        <li>
+              <a href="/contactus">About uss</a>
+            </li>
+      
+          <li>
+            <button type="button" class="btn w3ls-btn" data-toggle="modal" aria-pressed="false" data-target="#exampleModalCenter2">
+              <% if(session.user) {%> 
+                <%= session.user.username %>
+              <% }
+              else{ %>  
+              Login
+              <%}%>
+            </button>
+          </li>
+        </ul> -->
+
+
+        <div class="nav-container">
+          <div class="nav" >
+              <div class="nav-logo nav-item" >
+                  <a href="#">SocialHub</a>
+              </div>
+              <div class="nav-links nav-item">
+                  <a href="/" class="active">home</a>
+                  <a href="/chat" >Chat</a>
+                  <a href="/search">Search</a>
+                  <a href="/marketplace">Market Place</a>
+                    <% if(!session.user) {%> 
+                        <a href="/buyandsell">BUY/SELL</a>
+                      <%}else{%>
+                      <a href="/buyandsell"><%=session.user.type%></a>
+                  <% } %> 
+                  <a href="/dashboard" >Dash Board</a>
+                  <a href="/cart">Cart</a>
+                  <a href="/order">Order</a>
+
+                  <a href="/">Profile</a>
+                  <a href="/logout">Logout</a>
+                <a href="/history">history</a>
+
+              </div>
+              <div class="nav-cta nav-item">
+                  <a href="#">Connect with us</a>
+              </div>
+          </div>
+      </div>
+
+      <!-- </div>
+    </nav>
+
+</header> -->
+<!-- //header -->
+

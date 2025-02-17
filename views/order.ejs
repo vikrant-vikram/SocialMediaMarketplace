@@ -1,0 +1,150 @@
+
+<%- include('parcials/before_import') %>
+<%- include('parcials/after_import') %>
+<%- include('parcials/nav') %>
+
+
+
+
+<h1 class="top text-center">
+    Order
+</h1>
+
+<div class="container border-2px-solid-black">
+
+<table class="table ">
+
+    <tr class="thead-dark">
+        <th>Item</th>
+        <th>Cost(per unit)</th>
+        <th>Quantity(kg)</th>
+        <th>total Cost(rs)</th>
+    </tr>
+
+<%  var total=0; var i=0; item.forEach(itemdata => { total=total +(quantity[i]*itemdata.price);%>
+    <tr>
+        <td>
+            <%=itemdata.name%>
+        </td>
+        <td>
+            <%=itemdata.price %>
+        </td>
+        <td>
+            <%=quantity[i]%>
+        </td>
+        <td>
+            <%=quantity[i]*itemdata.price%> rs.
+        </td>
+</tr>
+
+<%i++;}); %> 
+
+</table>
+</div>
+
+<h1 class="text-center">Toatal amount:<strong><%= total %> </strong>rs</h1>
+
+
+
+<div class="jumbotron">
+
+    <h1 class="text-center text-uppercase"><strong>Delivery address</strong> </h1>
+<div class="container" data-aos="fade-up">
+    <form action="/order" method="post">
+        <div class="form-row">
+            <div class="col-lg-8">
+                <label for="name">Name</label>
+                <input id="name" class="form-control is-valid" type="text" name="name" placeholder="Name" required="" minlength="3">
+                <div class="invalid-feedback">
+                    enter valid name
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <label for="email">contact no</label>
+                <input id="contact" class="form-control is-valid" type="tel" name="contact" placeholder="contact" required="" maxlength="10" minlength="10">
+                <div class="invalid-feedback">
+                    enter valid email
+                </div>
+            </div>
+            </div>
+
+            <div class="form-row">
+                <div class="col-lg-8">
+                    <label for="address1">Flat, House no., Building, Company, Apartment:</label>
+                    <input id="adress1" class="form-control is-valid" type="text" name="address1" placeholder="Address" required="">
+                    <div class="invalid-feedback">
+                        enter valid address
+                    </div>
+                </div>
+                <div class="col-lg-2">
+                    <label for="zip">Zip code</label>
+                    <input id="zip" class="form-control is-valid" type="text" name="zip" placeholder="ZIP code" required="">
+                    <div class="invalid-feedback">
+                        enter valid Zip code
+                    </div>
+                </div>
+                <div class="col-lg-2">
+                    <label for="date">Order on</label>
+                    <input id="date" class="form-control is-valid" type="date" name="date"  required="">
+                    <div class="invalid-feedback">
+                        enter valid Zip code
+                    </div>
+                </div>
+                </div>
+                <div class="form-row">
+                    <div class="col-lg-8">
+                        <label for="address2">Area, Colony, Street, Sector, Village:</label>
+                        <input id="adress2" class="form-control is-valid" type="text" name="address2" placeholder="Address" required="">
+                        <div class="invalid-feedback">
+                            enter valid address
+                        </div>
+                    </div>
+                    <div class="col-lg-4">
+                        <label for="adress3">Town/City: </label>
+                        <input id="adress3" class="form-control is-valid" type="text" name="adress3" placeholder="Address" required="">
+                        <div class="invalid-feedback">
+                            enter valid address
+                        </div>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="col-lg-8">
+                        <label for="address4">Landmark e.g. near apollo hospital: </label>
+                        <input id="adress4" class="form-control is-valid" type="text" name="address4" placeholder="Address" required="">
+                        <div class="invalid-feedback">
+                            enter valid address
+                        </div>
+                    </div>
+                    <div class="col-lg-4">
+                        <label for="address5">State:  </label>
+                        <input id="address5" class="form-control is-valid" type="text" name="address5" placeholder="Address" required="" minlength="3">
+                        <div class="invalid-feedback">
+                            enter valid address
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="form-check">
+                      <input class="form-check-input is-invalid" type="checkbox" value="" id="invalidCheck3" required>
+                      <label class="form-check-label" for="invalidCheck3">
+                        Agree to terms and conditions
+                      </label>
+                      <div class="invalid-feedback">
+                        You must agree before submitting.
+                      </div>
+                    </div>
+                </div>
+                <div class="form-row pad-top">
+                <button class="btn btn-danger">Confirm </button>
+            </div>
+        </form>
+        </div>
+    </div>
+
+
+<!-- //contact -->
+
+
+</div> 
+
+<%- include('parcials/footer') %>
