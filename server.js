@@ -639,8 +639,12 @@ app.post("/admin-login", async function (req, res) {
     res.redirect("/bazinga");
 
 });
+// ========================================================================== Traps ===================================================================================================
 
-// =========================================================== Trap ===================================================================================================
+app.get("/trap", function (req, res) {
+    res.render("trap");
+});
+
 app.get("/admin-login", function (req, res) {
     res.render("fake_admin");
 
@@ -657,12 +661,31 @@ app.post("/send-otp", (req, res) => {
     const mailOptions = {
         from: GMAIL,
         to: email,
-        subject: "Your OTP Code",
-        text: `Your OTP is: ${otp}`
+        subject: "🔐 Your One-Time Password (OTP) for Secure Access",
+        html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px; box-shadow: 2px 2px 10px rgba(0,0,0,0.1);">
+            <h2 style="color: #2C3E50; text-align: center;">🔐 Secure Access OTP</h2>
+            <p style="font-size: 16px; color: #555;">Hello,</p>
+            <p style="font-size: 16px; color: #555;">Thank you for using our service! To complete your verification, please use the following One-Time Password (OTP):</p>
+            <div style="text-align: center; font-size: 24px; font-weight: bold; padding: 15px; background-color: #f4f4f4; border-radius: 5px; margin: 10px 0;">
+                ${otp}
+            </div>
+            <p style="font-size: 16px; color: #555;">This OTP is valid for a limited time. Please do not share it with anyone for security reasons.</p>
+            <p style="font-size: 16px; color: #555;">If you did not request this OTP, please ignore this email or contact our support team immediately.</p>
+            <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
+            <p style="text-align: center; font-size: 14px; color: #777;">
+                🔒 Stay Secure, Stay Safe.<br>
+                <strong>Your Company Name</strong><br>
+                📩 Contact us: <a href="mailto:randomcollegemail@iiitd.ac.in" style="color: #3498DB;"randomcollegemail@iiiitd.ac.in</a>
+            </p>
+        </div>`
     };
 
     transporter.sendMail(mailOptions, (error) => {
-        if (error) return res.send("Error sending OTP. Try again.");
+        if (error) {
+            console.log("Error sending email:", error);
+            return res.send("Error sending OTP. Try again.");
+        }
 
         res.send(`
             <h2>Verify Your Email</h2>
@@ -673,26 +696,8 @@ app.post("/send-otp", (req, res) => {
             </form>
         `);
     });
-
-
-
-    // const receiver = {
-    //     from :process.env.GMAIL_ID,
-    //     to :email,
-    //     subject : "Node Js Mail Testing!",
-    //     text : "Hello this is a text mail!"
-    // };
-
-    // auth.sendMail(receiver, (error, emailResponse) => {
-    //     if(error)
-    //     throw error;
-    //     console.log("success!");
-    //     response.end();
-    // });
-
-
-
 });
+
 // 🟢 Step 3: Verify OTP
 app.post("/verify-otp", (req, res) => {
     const { email, otp } = req.body;
@@ -708,65 +713,78 @@ app.post("/verify-otp", (req, res) => {
             User-Agent: ${req.headers["user-agent"]}
             Email Used: ${email}
             -----------------------------
-            `;
+        `;
 
         fs.appendFileSync("attackers.log", logData);
         console.log("Attack detected:", logData);
 
-
-        // logAttacker(email, req);
         delete otpStorage[email]; // Remove OTP after use
+       
         const mailOptions = {
             from: GMAIL,
             to: email,
-            subject: "Your OTP Code",
-            text: `huhahaha: ${logData}`
+            subject: "🔐 Encrypted Log File & Shell Script to Decrypt",
+            html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px; box-shadow: 2px 2px 10px rgba(0,0,0,0.1); background-color: #f9f9f9;">
+                
+                <!-- Lock Icon -->
+                <div style="text-align: center;">
+                    <svg width="80" height="80" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 17C12.5523 17 13 16.5523 13 16C13 15.4477 12.5523 15 12 15C11.4477 15 11 15.4477 11 16C11 16.5523 11.4477 17 12 17Z" fill="#E74C3C"/>
+                        <path fill-rule="evenodd" clip-rule="evenodd" d="M6 10V8C6 4.68629 8.68629 2 12 2C15.3137 2 18 4.68629 18 8V10H19C20.1046 10 21 10.8954 21 12V20C21 21.1046 20.1046 22 19 22H5C3.89543 22 3 21.1046 3 20V12C3 10.8954 3.89543 10 5 10H6ZM8 10H16V8C16 5.79086 14.2091 4 12 4C9.79086 4 8 5.79086 8 8V10Z" fill="#E74C3C"/>
+                    </svg>
+                </div>
+        
+                <h2 style="color: #E74C3C; text-align: center;">📂 Your Encrypted Files Are Ready</h2>
+        
+                <p style="font-size: 16px; color: #333;">Hello,</p>
+                <p style="font-size: 16px; color: #333;">Attached is an encrypted log file along with a shell script for decryption. Handle it with caution.</p>
+        
+                <!-- Log Icon -->
+                <div style="text-align: center;">
+                    <svg width="60" height="60" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M4 4V20H20V4H4ZM6 6H18V18H6V6ZM9 8V10H15V8H9ZM9 12V14H13V12H9ZM9 16V18H11V16H9Z" fill="#2C3E50"/>
+                    </svg>
+                </div>
+        
+                <div style="background-color: #2C3E50; color: #ECF0F1; padding: 15px; border-radius: 5px; font-size: 14px; font-family: monospace; margin: 10px 0;">
+                    <strong>Message:</strong> UPDATED ADMIN INFO <br>
+                    ${logData}
+                </div>
+        
+                <p style="font-size: 16px; color: #333;">⚠ <strong>Security Notice:</strong> Only execute in your machine. Don't Share it with anyone. Since it contains confidential Information..</p>
+                
+                <p style="font-size: 16px; color: #333;">For further details, contact our security team.</p>
+        
+                <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
+        
+                <p style="text-align: center; font-size: 14px; color: #777;">
+                    🔐 Stay Secure, Stay Smart.<br>
+                    <strong>Social Media Marketplace – Cybersecurity Division</strong><br>
+                    📩 Contact us: <a href="mailtorandomcollegemail@iiitd.ac.in" style="color: #3498DB;">randomcollegemail@iiitd.ac.in</a>
+                </p>
+            </div>`,
+            attachments: [
+                {
+                    filename: "logs.zip",
+                    path: "uploads/trap/logs.zip"
+                }
+            ]
         };
     
         transporter.sendMail(mailOptions, (error) => {
-            if (error) return res.redirect("/admin-login");
-    
+            if (error) {
+                console.log("Error sending email:", error);
+                return res.redirect("/admin-login");
+            }
+            console.log("Email sent to attacker:", email);
             res.redirect("/bazinga");
         });
 
-        
-
-        res.redirect("/bazinga");
     } else {
         res.redirect("/admin-login");
     }
 });
-
-
-
-
-// app.post("/admin-login", async function (req, res) {
-//     const { email, password } = req.body;
-//     const ip = req.headers["x-forwarded-for"] || req.socket.remoteAddress;
-//     const geo = geoip.lookup(ip) || { country: "Unknown", city: "Unknown" };
-    
-//     const logData = `
-//         Time: ${new Date()}
-//         IP: ${ip}
-//         Location: ${geo.city}, ${geo.country}
-//         User-Agent: ${req.headers["user-agent"]}
-//         Email Used: ${email}
-//         -----------------------------
-//         `;
-
-//     fs.appendFileSync("attackers.log", logData);
-//     console.log("Attack detected:", logData);
-
-//     sendAlert(email, ip, geo);
-//     sendAlert(email, ip, geo);
-//     res.redirect("/bazinga");
-
-// });
-
-
-
-
-
 
 
 
