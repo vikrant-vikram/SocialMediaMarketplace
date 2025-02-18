@@ -9,8 +9,8 @@ function changeText(e) {
   $yes.style.display = "none";
   $no.style.display = "none";
   if (this == $yes) {
-    $title.innerHTML = "STAY AT HOME!";
+    $title.innerHTML = "HEHHEHE! WELL YOU CANT!";
   } else if (this == $no) {
-    $title.innerHTML = "FUCK YOU!";
+    $title.innerHTML = "F**K YOU!";
   }
 }

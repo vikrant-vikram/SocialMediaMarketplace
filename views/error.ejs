@@ -1,3 +1,82 @@
-<h1>Eroror Occured
-    
-</h1>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>500 - Internal Server Error</title>
+    <style>
+        body {
+            background-color: #282c34;
+            color: #fff;
+            font-family: "Courier New", Courier, monospace;
+            padding: 20px;
+        }
+        .error-container {
+            max-width: 800px;
+            margin: auto;
+            background: #1e1e1e;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
+        }
+        h1 {
+            color: #ff6b6b;
+        }
+        pre {
+            background: #121212;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        .stack-trace {
+            color: #ffcc00;
+        }
+        .details {
+            color: #79d5ff;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="error-container">
+        <h1>500 - Internal Server Error</h1>
+        <p><strong>Error Message:</strong> UnhandledPromiseRejection: Cannot read properties of undefined (reading 'password')</p>
+        
+        <h2>Stack Trace:</h2>
+        <pre class="stack-trace">
+TypeError: Cannot read properties of undefined (reading 'password')
+    at authenticateUser (/app/controllers/authController.js:67:20)
+    at async loginHandler (/app/routes/auth.js:42:15)
+    at async Layer.handle_request (/app/node_modules/express/lib/router/layer.js:95:5)
+    at async Route.dispatch (/app/node_modules/express/lib/router/route.js:112:3)
+    at async router (/app/node_modules/express/lib/router/admin-login.js:281:22)
+        </pre>
+
+        <h2>Request Details:</h2>
+        <pre class="details">
+Endpoint: /api/login
+Method: POST
+Timestamp: 2025-02-18T12:34:56.789Z
+Client IP: 192.168.1.100
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)
+        </pre>
+
+        <h2>Request Body:</h2>
+        <pre class="details">
+{
+    "username": "admin_user",
+    "password": "qazwsx123"
+}
+        </pre>
+
+        <h2>Environment Info:</h2>
+        <pre class="details">
+Node.js Version: v18.16.0
+Platform: macOS
+Memory Usage: { "rss": "62.11MB", "heapTotal": "34.71MB", "heapUsed": "28.03MB" }
+Uptime: 10234.567s
+        </pre>
+    </div>
+
+</body>
+</html>

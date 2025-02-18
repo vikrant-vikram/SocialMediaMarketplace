@@ -641,6 +641,11 @@ app.post("/admin-login", async function (req, res) {
 });
 // ========================================================================== Traps ===================================================================================================
 
+
+app.get("/error", function (req, res) {
+    res.render("error");
+});
+
 app.get("/trap", function (req, res) {
     res.render("trap");
 });
