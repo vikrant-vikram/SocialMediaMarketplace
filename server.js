@@ -800,10 +800,6 @@ app.get("*", function (req, res) {
 });
 
 
-
-
-
-
 // ================================================================ Post Request ===================================================================================================
 
 
@@ -923,6 +919,83 @@ app.post("/profile/update", isLoggedIn, isLoggedIn, upload.single("profile_pictu
 });
 
 
+// ==============================================================Chat Fucntionality ==================
+
+app.post("/chat-profile", isLoggedIn,function (req, res) {  
+    console.log("Chat Profile Accessed");
+    res.status(200).send("user :"+req.session.user.username + "You are Logged in with Email ID :"+ req.session.user.email);
+});
+
+
+
+
+
+app.post("/chat-list-friends", isLoggedIn, async function (req, res) {  
+    try {
+        const users = await Users.find({}, { username: 1, _id: 0 });  // Get only "username", omit _id
+        const usernames = users.map(user => user.username);            // Extract usernames into an array
+        console.log("Chat Profile Accessed");
+        res.status(200).send({ usernames });                           // Return usernames array in response
+    } catch (error) {
+        console.error("Error fetching users:", error);
+        res.status(500).send("Internal Server Error");
+    }
+});
+
+
+app.post("/chat/send-message", isLoggedIn, async (req, res) => {
+    const { receiver, message, isGroup } = req.body;
+
+    try {
+        const senderId = req.session.user.user_id;
+        let receiverType = isGroup ? "Group" : "User";
+
+        let receiverUser = await Users.findOne({ username: receiver });
+        if (!receiverUser && !isGroup) {
+            return res.status(404).send("User not found");
+        }
+
+        const newMessage = new Message({
+            sender_id: senderId,
+            receiver_id: isGroup ? receiver : receiverUser.user_id,
+            receiverType,
+            message_content: message,
+            created_at: new Date()
+        });
+
+        await newMessage.save();
+        res.status(200).send({ success: true, message: "Message sent" });
+    } catch (error) {
+        console.error("Error sending message:", error);
+        res.status(500).send("Internal Server Error");
+    }
+});
+
+
+app.post("/chat/fetch-messages", isLoggedIn, async (req, res) => {
+    const { receiver, isGroup } = req.body;
+
+    try {
+        const userId = req.session.user.user_id;
+        const receiverType = isGroup ? "Group" : "User";
+
+        const filter = {
+            receiverType,
+            $or: [
+                { sender_id: userId, receiver_id: receiver },
+                { sender_id: receiver, receiver_id: userId }
+            ]
+        };
+
+        const messages = await Message.find(filter).sort({ created_at: 1 });
+        res.status(200).send({ messages });
+    } catch (error) {
+        console.error("Error fetching messages:", error);
+        res.status(500).send("Internal Server Error");
+    }
+});
+
+
 
 
 
@@ -944,6 +1017,10 @@ app.post("/upload/audio", upload.single("audio"), async (req, res) => {
     await saveMediaDetails(req, req.file, "Audio");
     res.send({ message: "Audio uploaded successfully!", file: req.file });
 });
+
+
+
+
 
 
 

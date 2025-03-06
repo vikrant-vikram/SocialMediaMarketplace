@@ -1,163 +1,104 @@
 
-<%- include('parcials/before_import') %>
-<link rel="stylesheet" href="/css/style.css">
-<link rel="stylesheet" href="/css/blob.css"> 
-<link rel="stylesheet" href="/css/chat.css"> 
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.10.4/gsap.min.js"></script>
-<script src="/js/script.js"></script>
-<%- include('parcials/after_import') %>
-<!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" integrity="sha512-7eHRwcbYkK4d9g/6tD/mhkf++eoTHwpNM9woBxtPUBWm67zeAfFC+HrdoE2GanKeocly/VxeLvIqwvCdk7qScg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script> -->
-<%- include('parcials/nav') %>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.3/jquery.min.js"></script>
+  <title>terminal</title>
+  <link rel="stylesheet" href="/css/style-chat.css">
+</head>
+<body  >
 
-        <div class="container">
-            <div class="blobs">
-                <div class="blob a">a</div>
-                <div class="blob b">b</div>
-                <div class="blob c">c</div>
-            </div>
-        </div>
-
-        <div class="blob blob-1"></div>
-        <div class="blob blob-2"></div>
-        <div class="blob blob-3"></div>
+  <audio id="notifypop" controls hidden > 
+    <source src="path/sound.ogg" type="audio/ogg">
+    <source src="media/creepy-echo-scary-and-spooky-sounds-9685.mp3" type="audio/mpeg">
+  </audio>
 
 
-    <div class="horizontal-scroll-container">
-        <div class="horizontal-scroll" id="horizontal-scroll">
-            <!-- Profile Card 1 -->
-            <div class="profile-card" onclick="window.location.href='http://localhost:8080/'">
-                <div class="profile-photo">
-                    <img src="/images/1.jpg" alt="Profile 1">
-                </div>
-                <div class="profile-name">John Doe</div>
-                <div class="profile-description">Photographer</div>
-            </div>
-            <div class="profile-card" onclick="window.location.href='http://localhost:8080/'">
-                <div class="profile-photo">
-                    <img src="/images/1.jpg" alt="Profile 1">
-                </div>
-                <div class="profile-name">John Doe</div>
-                <div class="profile-description">Photographer</div>
-            </div>
+  <audio id="keyboardsound" controls hidden > 
+    <source src="path/sound.ogg" type="audio/ogg">
+    <source src="media/key-4.mp3" type="audio/mpeg">
+  </audio>
 
-            <div class="profile-card" onclick="window.location.href='http://localhost:8080/'">
-                <div class="profile-photo">
-                    <img src="/images/1.jpg" alt="Profile 1">
-                </div>
-                <div class="profile-name">John Doe</div>
-                <div class="profile-description">Photographer</div>
-            </div>
-
-            <div class="profile-card" onclick="window.location.href='http://localhost:8080/'">
-                <div class="profile-photo">
-                    <img src="/images/1.jpg" alt="Profile 1">
-                </div>
-                <div class="profile-name">John Doe</div>
-                <div class="profile-description">Photographer</div>
-            </div>
+  <div class="overlay"></div>
+  <div class="scanline"></div>
+  
+  <div class="terminal wrapper">
+    <p class="page-intro red"></p>
 
 
-            <div class="profile-card" onclick="window.location.href='http://localhost:8080/'">
-                <div class="profile-photo">
-                    <img src="/images/1.jpg" alt="Profile 1">
-                </div>
-                <div class="profile-name">John Doe</div>
-                <div class="profile-description">Photographer</div>
-            </div>
-
-            <div class="profile-card" onclick="window.location.href='http://localhost:8080/'">
-                <div class="profile-photo">
-                    <img src="/images/1.jpg" alt="Profile 1">
-                </div>
-                <div class="profile-name">John Doe</div>
-                <div class="profile-description">Photographer</div>
-            </div>
-
-            <div class="profile-card" onclick="window.location.href='http://localhost:8080/'">
-                <div class="profile-photo">
-                    <img src="/images/1.jpg" alt="Profile 1">
-                </div>
-                <div class="profile-name">John Doe</div>
-                <div class="profile-description">Photographer</div>
-            </div>
-
-
-            <div class="profile-card" onclick="window.location.href='http://localhost:8080/'">
-                <div class="profile-photo">
-                    <img src="/images/1.jpg" alt="Profile 1">
-                </div>
-                <div class="profile-name">John Doe</div>
-                <div class="profile-description">Photographer</div>
-            </div>
-
-
-            <!-- Profile Card 2 -->
-            <div class="profile-card"  onclick="window.location.href='http://localhost:8080/'">
-                <div class="profile-photo">
-                    <img src="/images/1.jpg" alt="Profile 2">
-                </div>
-                <div class="profile-name">Jane Smith</div>
-                <div class="profile-description">Traveler</div>
-            </div>
-
-            <!-- Add more profiles dynamically -->
-            <div class="loader" id="loader">Loading more profiles...</div>
-        </div>
+    <!-- Changed  -->
+    <div class="image-hero-removed"> 
+      <!-- <img src="https://cdn.pixabay.com/photo/2017/02/24/22/00/skull-2096533_1280.png" alt="">s -->
     </div>
 
 
-        <!-- Chat Section -->
-    <section class="chat-section">
-        <div class="chat-box">
-            <div class="chat-header">
-                <h2>Chat</h2>
-            </div>
-            <div class="messages">
-                <div class="message sent">
-                    <p>Hi there! How can we help you today?</p>
-                    <span class="timestamp">10:00 AM</span>
-                </div>
-                <div class="message received">
-                    <p>Lorem ipsum dolor, sit amet consectetur adipisicing elit. Laborum, similique distinctio! Dolor cupiditate rerum corporis ducimus quaerat quidem. Quidem accusamus, debitis dolores amet earum excepturi esse praesentium minima sequi perspiciatis?</p>
-                    <span class="timestamp">10:02 AM</span>
-                </div>
-            </div>
-            <div class="chat-input">
-                <input type="text" placeholder="Type your message...">
-                <button>Send</button>
-            </div>
-        </div>
-    </section>
 
+    <p id="login-session"> Tue Jan 10 17:48:46 on ttys000</p>
+    <table>
+      <tr>
+        <td>Command</td>
+        
+        <td></td>  
+        <td></td>
+      </tr>
+      <tr>
+        <td></td>
+        <td>./profile</td> 
+        <td>: To print User Specific inforation</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td>--help </td> 
+        <td>: To Get infroamtion regarding commands</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td>./getintro </td> 
+        <td>: To Get the introduction </td>
+      </tr>
+      <tr>
+        <td></td>
+        <td>./contact</td> 
+        <td>: To print contact</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td>./login</td> 
+        <td>: To login</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td>./logout</td> 
+        <td>: To logout</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td>./chat</td> 
+        <td>: To logout</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td>./askai</td> 
+        <td>: To chat with AI</td>
+      </tr>
 
-    <!-- Horizont Scroll -->
-
-
-        <!-- <section class="grid">
-            <div class="card">
-                <img src="/images/1.jpg" alt="Image 1">
-                <h2>Photo Title 1</h2>
-            </div>
-            <div class="card">
-                <img src="/images/2.jpg" alt="Image 2">
-                <h2>Photo Title 2</h2>
-            </div>
-            <div class="card">
-                <img src="/images/1.jpg" alt="Image 3">
-                <h2>Photo Title 3</h2>
-            </div>
-            <div class="card">
-                <img src="/images/2.jpg" alt="Image 4">
-                <h2>Photo Title 4</h2>
-            </div>
-        </section> -->
-
-
+    </table>
+    <div class="terminal-output"></div>
+    <div class="terminal-input">
+      <span class="prompt">user-random_number@PC1 ~ %</span>
+      <input type="text" id="terminal-input">
     </div>
+  </div>
 
 
-  <script src="/js/script.js"></script>
 
-<%- include('parcials/footer') %>
 
+<script src="/js/chatScript.js"></script>
+
+  
+</body>
+</html>
