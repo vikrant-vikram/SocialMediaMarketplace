@@ -28,7 +28,7 @@ const nodemailer = require("nodemailer");
 const geoip = require("geoip-lite");
 const crypto = require("crypto");
 
-
+const winston = require('winston');
 
 // =========================================================== Importing Required Models ===================================================================================================
 
@@ -197,6 +197,66 @@ const upload = multer({
 });
 
 
+
+// Configure Winston logger
+// Create a Winston logger
+const logger = winston.createLogger({
+    level: 'info',
+    format: winston.format.combine(
+        winston.format.timestamp(),
+        winston.format.json()
+    ),
+    transports: [
+        new winston.transports.File({ filename: 'logs.txt' }), // Log to file
+        new winston.transports.Console(), // Log to console
+    ],
+});
+
+// Preserve original console methods
+const originalConsoleLog = console.log;
+const originalConsoleError = console.error;
+const originalConsoleWarn = console.warn;
+const originalConsoleDebug = console.debug;
+
+// Override console methods
+console.log = (...args) => {
+    logger.info(...args); // Log using Winston
+    originalConsoleLog(...args); // Call original console.log
+};
+
+console.error = (...args) => {
+    logger.error(...args); // Log using Winston
+    originalConsoleError(...args); // Call original console.error
+};
+
+console.warn = (...args) => {
+    logger.warn(...args); // Log using Winston
+    originalConsoleWarn(...args); // Call original console.warn
+};
+
+console.debug = (...args) => {
+    logger.debug(...args); // Log using Winston
+    originalConsoleDebug(...args); // Call original console.debug
+};
+
+
+
+
+// Middleware to check if the user is an admin
+function isAdmin(req, res, next) {
+    req.session.isAdmin = true; // Set isAdmin to true for testing
+    const admin = req.session.isAdmin;
+
+    if (admin) {
+        next();
+    } else {
+        res.status(403).json({ success: false, message: 'Access denied' });
+    }
+}
+
+
+
+
 // =============================================================== Stripe ===================================================================================================
 const products = new Map([
 
@@ -324,7 +384,10 @@ app.get("/login" , function (req, res) {
 app.get('/user/:username', isLoggedIn, async (req, res) => {
     const username = req.params.username;
     console.log("/user/:username page Accessed");
+    logger.info("/user/:username page Accessed");
     console.log("Searching for user:", username);
+    logger.info("Searching for user:", username);
+
 
     try {
         // Find user in database (Fix typo: username instead of usernaame)
@@ -370,6 +433,8 @@ app.get('/user/:username', isLoggedIn, async (req, res) => {
             res.render("viewProfile", {user: user,  mediaFiles: mediaList, friendship: existingFollow});
 
     } catch (err) {
+        logger.error("User Finding Error:", err);
+
         console.error("User Finding Error:", err);
         res.redirect("/profile");
     }
@@ -438,12 +503,87 @@ app.get("/followrequest", isLoggedIn, async (req, res) => {
 
         // Step 3: Pass the data to search.ejs
         console.log("Users who sent requests:", usersWhoSentRequests);
-        res.render("search", { users: usersWhoSentRequests });
+        res.render("followrequest", { users: usersWhoSentRequests });
     } catch (error) {
         console.error("Error fetching follow requests:", error);
         res.status(500).json({ error: "Internal server error" });
     }
 });
+
+
+app.get("/friends", isLoggedIn, async (req, res) => {
+    try {
+        const currentUser = req.session.user; // Logged-in user
+
+        // Step 1: Find all pending follow requests where currentUser is the target
+        const pendingRequests = await Friendship.find({
+            status: "Accepted",
+            user_id: currentUser._id, // Current user is the recipient
+        }).populate("friend_id_or_follow_id", "username name profile_picture_url bio"); // Populate sender details
+
+        // Step 2: Extract users who sent requests
+        // console.log("Pending requests:", pendingRequests);
+        const usersWhoSentRequests = pendingRequests.map(request => request.friend_id_or_follow_id);
+
+        // Step 3: Pass the data to search.ejs
+        // console.log("Users who sent requests:", usersWhoSentRequests);
+        res.render("friends", { users: usersWhoSentRequests });
+    } catch (error) {
+        console.error("Error fetching follow requests:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+
+
+
+app.post('/accept-friend', isLoggedIn,async (req, res) => {
+    const { username } = req.body;  // The username you want to accept (like "tester")
+
+    if (!username) {
+        return res.status(400).json({ success: false, message: 'Username is required' });
+    }
+
+    const currentUser = req.session.user;  // Logged-in user (recipient of request)
+
+    try {
+        // Step 1: Find friend user's ObjectId
+        const friendUser = await Users.findOne({ username });
+
+        if (!friendUser) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+
+        console.log('Accepting friend request from:', friendUser._id);
+
+        // Step 2: Find and update friendship record
+        const friendRequest = await Friendship.findOneAndUpdate(
+            {
+                user_id: currentUser._id,              // Current logged-in user is recipient
+                friend_id_or_follow_id: friendUser._id, // This is the request sender
+                status: 'Pending'
+            },
+            { $set: { status: 'Accepted' } },
+            { new: true }  // Return updated document
+        );
+
+        if (!friendRequest) {
+            console.log('No matching friend request found for:', friendUser._id);
+            return res.status(404).json({ success: false, message: 'Friend request not found' });
+        }
+
+        console.log('Friend request accepted:', friendRequest);
+        res.json({ success: true, message: 'Friend request accepted' });
+
+    } catch (error) {
+        console.error('Error accepting friend request:', error);
+        res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+});
+
+
+
+
+
 // ====================================================CHekc ===================================================
 
 app.get("/prediction", function (req, res) {
@@ -794,6 +934,22 @@ app.post("/verify-otp", (req, res) => {
 
 
 
+// Endpoint to fetch logs
+app.get('/admin/logs', isAdmin, (req, res) => {
+    try {
+        // Read logs from the file
+        const logs = fs.readFileSync(path.join(__dirname, 'logs.txt'), 'utf-8');
+        res.json({ success: true, logs });
+    } catch (error) {
+        logger.error('Error reading logs:', error); // Log the error
+        res.status(500).json({ success: false, message: 'Failed to fetch logs' });
+    }
+});
+
+
+
+
+
 // =========================================================================== * ===================================================================================================
 app.get("*", function (req, res) {
     res.render("bazinga");
@@ -932,38 +1088,62 @@ app.post("/chat-profile", isLoggedIn,function (req, res) {
 
 app.post("/chat-list-friends", isLoggedIn, async function (req, res) {  
     try {
-        const users = await Users.find({}, { username: 1, _id: 0 });  // Get only "username", omit _id
-        const usernames = users.map(user => user.username);            // Extract usernames into an array
+        const currentUser = req.session.user;
+    
+        const friends = await Friendship.find({
+            status: "Accepted",
+            user_id: currentUser._id, // Current user is the recipient
+        }).populate("friend_id_or_follow_id", "username name");  // Only populate username & name
+    
+        // Extract only username and name
+        const simplifiedFriends = friends.map(friend => ({
+            username: friend.friend_id_or_follow_id.username,
+            name: friend.friend_id_or_follow_id.name
+        }));
+    
         console.log("Chat Profile Accessed");
-        res.status(200).send({ usernames });                           // Return usernames array in response
+    
+        res.status(200).send({ friends: simplifiedFriends }); // Send simplified list
     } catch (error) {
         console.error("Error fetching users:", error);
         res.status(500).send("Internal Server Error");
     }
 });
 
-
 app.post("/chat/send-message", isLoggedIn, async (req, res) => {
     const { receiver, message, isGroup } = req.body;
 
+    if (!message || message.trim() === "") {
+        return res.status(400).send("Message content is required.");
+    }
+
     try {
         const senderId = req.session.user.user_id;
-        let receiverType = isGroup ? "Group" : "User";
 
-        let receiverUser = await Users.findOne({ username: receiver });
-        if (!receiverUser && !isGroup) {
-            return res.status(404).send("User not found");
+        let receiverId;
+
+        if (isGroup) {
+            receiverId = receiver;
+        } else {
+            const receiverUser = await Users.findOne({ username: receiver });
+            if (!receiverUser) {
+                return res.status(404).send("User not found");
+            }
+            receiverId = receiverUser.user_id;
         }
 
         const newMessage = new Message({
             sender_id: senderId,
-            receiver_id: isGroup ? receiver : receiverUser.user_id,
-            receiverType,
+            receiver_id: receiverId,
+            receiverType: isGroup ? "Group" : "User",
             message_content: message,
             created_at: new Date()
         });
 
+        console.log("Sending message:", newMessage);
+
         await newMessage.save();
+
         res.status(200).send({ success: true, message: "Message sent" });
     } catch (error) {
         console.error("Error sending message:", error);
@@ -972,11 +1152,12 @@ app.post("/chat/send-message", isLoggedIn, async (req, res) => {
 });
 
 
+
 app.post("/chat/fetch-messages", isLoggedIn, async (req, res) => {
     const { receiver, isGroup } = req.body;
 
     try {
-        const userId = req.session.user.user_id;
+        const userId = req.session.user.user_id;  // This is already a string UUID
         const receiverType = isGroup ? "Group" : "User";
 
         const filter = {
@@ -994,8 +1175,6 @@ app.post("/chat/fetch-messages", isLoggedIn, async (req, res) => {
         res.status(500).send("Internal Server Error");
     }
 });
-
-
 
 
 
@@ -1020,6 +1199,7 @@ app.post("/upload/audio", upload.single("audio"), async (req, res) => {
 
 
 
+// ================================================================== Administraion ===================================================================================================
 
 
 

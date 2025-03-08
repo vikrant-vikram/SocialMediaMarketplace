@@ -266,7 +266,7 @@ const apiRequests = {
   makeContactRequest: () => makePostRequest("/contact", {}),
   makeChatRequest: (data) => makePostRequest("/chat", { data }),
   makeProfileRequest: () => makePostRequest("/chat-profile", {}),
-  makeGetAssignmentRequest: () => makePostRequest("/chat-list-friends", {}),
+  makeGetFriendsRequest: () => makePostRequest("/chat-list-friends", {}),
 
 
 
