@@ -281,3 +281,5 @@
 {"level":"info","message":"Searching for user:","timestamp":"2025-03-08T08:57:29.036Z"}
 {"level":"info","message":"No user found with this username","timestamp":"2025-03-08T08:57:29.078Z"}
 {"__v":0,"_id":"67aae921aeef6d2134be308c","bio":"dThe Social Media Platform is intended to provide end-to-end security for group interactions, private messages, media sharing, and P2P Marketplace. The goal is to build a robust system that ensures …","created_at":"2025-02-11T06:07:29.174Z","email":"testdd@gmail.com","email_verified":false,"is_suspended":false,"level":"info","message":"User is logged in","mobile_number":"1234567890","mobile_verified":false,"name":"Chaman Chutiyadd","password_hash":"$2b$10$jySbXqjsMD9FXFulidlaGe4ms95wHOusC1d95ZzF13Us2jfTd0zvG","profile_picture_url":"/uploads/profile_pictures/1739263030040.PNG","timestamp":"2025-03-08T08:57:29.083Z","updated_at":"2025-02-11T08:37:10.057Z","user_id":"f12fdd56-9e40-44e9-a3a9-708dcd374cf6","username":"Chamandf"}
+{"level":"info","message":"serever is live at  port  no: %s","timestamp":"2025-03-10T06:21:55.842Z"}
+{"level":"info","message":"Connected to MongoDB","timestamp":"2025-03-10T06:21:58.561Z"}

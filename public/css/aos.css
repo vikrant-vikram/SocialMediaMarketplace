@@ -95,9 +95,9 @@ body {
 *:after {
   box-sizing: border-box; }
 
-a {
+/* a {
   text-decoration: none;
-  color: #FF4081; }
+  color: #FF4081; } */
 
 /**
  * Backgrounds

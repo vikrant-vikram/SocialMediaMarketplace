@@ -795,7 +795,7 @@ app.get("/admin-login", function (req, res) {
 
 });
 
-// 🟢 Step 2: Generate and send OTP
+//  Step 2: Generate and send OTP
 app.post("/send-otp", (req, res) => {
     const { email } = req.body;
     console.log("Sending OTP to:", email, GMAIL, GMAIL_PASSWORD);
@@ -843,7 +843,7 @@ app.post("/send-otp", (req, res) => {
     });
 });
 
-// 🟢 Step 3: Verify OTP
+//  Step 3: Verify OTP
 app.post("/verify-otp", (req, res) => {
     const { email, otp } = req.body;
 
@@ -944,6 +944,10 @@ app.get('/admin/logs', isAdmin, (req, res) => {
         logger.error('Error reading logs:', error); // Log the error
         res.status(500).json({ success: false, message: 'Failed to fetch logs' });
     }
+});
+
+app.get("/admin", isAdmin, function (req, res) {
+    res.render("admin");
 });
 
 
