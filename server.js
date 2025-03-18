@@ -16,7 +16,7 @@ const express = require('express');
 const app = express();
 const stripe = require("stripe")(process.env.STRIPE_PRIVATE_KEY);
 const bcrypt = require('bcrypt');
-var cookieParser = require('cookie-parser');
+// var cookieParser = require('cookie-parser');
 const body= require("body-parser");
 const fs = require('fs');
 const mongoose=require("mongoose");
@@ -29,6 +29,11 @@ const geoip = require("geoip-lite");
 const crypto = require("crypto");
 
 const winston = require('winston');
+
+
+
+const cookieParser = require("cookie-parser");
+const session = require("express-session");
 
 // =========================================================== Importing Required Models ===================================================================================================
 
@@ -50,7 +55,8 @@ const History = require("./models/history");
 const Cart = require("./models/cart");
 const Orders = require("./models/order");
 
-
+const securityMiddleware = require("./securityMiddleware");
+const csrfMiddleware = require("./csrfMiddleware");
 
 
 const GMAIL = process.env.GMAIL_ID;
@@ -75,19 +81,41 @@ mongoose.connect(DBSERVER)
 
 
 
-
+app.use(express.json()); 
 app.use(cookieParser());
-app.use(require("express-session")(
-{
+
+// app.use(require("express-session")(
+// {
+//     secret: process.env.SECRET,
+//     resave:false,
+//     saveUninitialized:false
+// }));
+
+// app.use(function(req,res,next){
+//     res.locals.session = req.session;
+//     next();
+// });
+
+
+app.use(session({
     secret: process.env.SECRET,
-    resave:false,
-    saveUninitialized:false
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "Strict"
+    }
 }));
 
-app.use(function(req,res,next){
+// Make session accessible in templates
+app.use((req, res, next) => {
     res.locals.session = req.session;
     next();
 });
+
+// Apply CSRF Protection Middleware (Backend Only)
+app.use(csrfMiddleware);
 
 
 // app.use(passport.initialize());
@@ -257,16 +285,6 @@ function isAdmin(req, res, next) {
 
 
 
-// =============================================================== Stripe ===================================================================================================
-const products = new Map([
-
-    [1, {name:"Basic(Monthly)", Price:process.env.BASIC_ID, Features: "Basic Plan (Monthly): 1000sms/month"}],
-    [2, {name: "SILVER_ID",Price:process.env.SILVER_ID, Features: "Basic Plan (Yearly): 1000sms/month"}],
-    [3, {name:"GOLD_ID", Price:process.env.GOLD_ID, Features: "Preimium Plan (Monthly) : Unlimited sms/month"}],
-    [4, {name:"DIAMOND_ID", Price:process.env.DIAMOND_ID, Features: "Premium Plan (Yearly) : Unlimited sms/month"}]
-])
-
-
 
 
 
@@ -332,6 +350,7 @@ app.get("/upload",isLoggedIn,function (req, res) {
 
 
 app.get("/editprofile",isLoggedIn,function (req, res) {
+    req.session.extraAuth = false;
     res.render("editProfile",{ user: req.session.user});
 
 });
@@ -442,8 +461,9 @@ app.get('/user/:username', isLoggedIn, async (req, res) => {
 
 
 
-app.get("/follow/:username", isLoggedIn, async (req, res) => {
+app.get("/follow/:username", isLoggedIn, securityMiddleware, async (req, res) => {
     try {
+        req.session.extraAuth= false;
         const currentUser = req.session.user; // Logged-in user
         const targetUser = await Users.findOne({ username: req.params.username });
 
@@ -536,8 +556,8 @@ app.get("/friends", isLoggedIn, async (req, res) => {
 
 
 
-app.post('/accept-friend', isLoggedIn,async (req, res) => {
-    const { username } = req.body;  // The username you want to accept (like "tester")
+app.post('/accept-friend', isLoggedIn,securityMiddleware,async (req, res) => {
+    const { username } = req.body; 
 
     if (!username) {
         return res.status(400).json({ success: false, message: 'Username is required' });
@@ -671,7 +691,7 @@ app.get("/cart", isLoggedIn, async (req, res) => {
 });
 
 // ➕ **Add to Cart**
-app.get("/addToCart/:name/:q", async (req, res) => {
+app.get("/addToCart/:name/:q",async (req, res) => {
     try {
         const cartData = { itemname: req.params.name, username: req.session.user._id };
         await Cart.findOneAndDelete(cartData);
@@ -719,31 +739,112 @@ app.get("/order", isLoggedIn, async (req, res) => {
 });
 
 // **POST: Place Order**
+// app.post("/order", isLoggedIn, async (req, res) => {
+//     try {
+//         const cart = await Cart.find({ username: req.session.user._id });
+//         if (!cart.length) return res.render("error");
+
+        
+
+//         for (const cartItem of cart) {
+//             const item = await Items.findOne({ name: cartItem.itemname });
+//             const orderData = {
+//                 username: req.session.user._id, typ: req.session.user.type, name: req.body.name,
+//                 itemname: cartItem.itemname, deliverydate: req.body.date, zip: req.body.zip,
+//                 contact: req.body.contact, address1: req.body.address1, quantity: cartItem.quantity,
+//                 price: item.price
+//             };
+//             await Orders.create(orderData);
+//         }
+
+//         const orderHistory = await Orders.find({ username: req.session.user._id });
+//         res.render("history", { order: orderHistory });
+//     } catch (err) {
+//         console.error(err);
+//         res.render("error");
+//     }
+// });
+
+
+
+
+
 app.post("/order", isLoggedIn, async (req, res) => {
     try {
+        // Fetch cart items
         const cart = await Cart.find({ username: req.session.user._id });
         if (!cart.length) return res.render("error");
 
+        let totalAmount = 0;
+        let orderItems = [];
+
+        // Calculate total price and prepare order data
         for (const cartItem of cart) {
             const item = await Items.findOne({ name: cartItem.itemname });
-            const orderData = {
-                username: req.session.user._id, typ: req.session.user.type, name: req.body.name,
-                itemname: cartItem.itemname, deliverydate: req.body.date, zip: req.body.zip,
-                contact: req.body.contact, address1: req.body.address1, quantity: cartItem.quantity,
-                price: item.price
-            };
-            await Orders.create(orderData);
+            const price = item.price * cartItem.quantity;
+            totalAmount += price;
+
+            orderItems.push({
+                username: req.session.user._id,
+                typ: req.session.user.type,
+                name: req.body.name,
+                itemname: cartItem.itemname,
+                deliverydate: req.body.date,
+                zip: req.body.zip,
+                contact: req.body.contact,
+                address1: req.body.address1,
+                quantity: cartItem.quantity,
+                price
+            });
+        }
+        console.log("Order Items:", orderItems);
+
+        const session = await stripe.checkout.sessions.create({
+            payment_method_types: ["card"],
+            mode: "payment", // For one-time payments, use "payment"
+            line_items: [
+                {
+                    price_data: {
+                        currency: 'inr',
+                        product_data: {
+                            name: "Order",
+                        },
+                        unit_amount: totalAmount * 100, // Stripe expects the amount in the smallest currency unit (paise)
+                    },
+                    quantity: 1, // Adjust the quantity if needed
+                },
+            ],
+            success_url: `${process.env.SERVER_URL}/profile`, // Ensure the correct success URL
+            cancel_url: `${process.env.SERVER_URL}/error`,    // Ensure the correct cancel URL
+        });
+        // Create Stripe Payment Intent
+        // const paymentIntent = await stripe.paymentIntents.create({
+        //     amount: totalAmount * 100, // Convert to cents (Stripe uses smallest currency unit)
+        //     currency: "usd",
+        //     payment_method_types: ["card"]
+        // });
+
+        // Store orders in DB after successful payment
+        for (const order of orderItems) {
+            await Orders.create(order);
         }
 
+        // Clear cart after order is placed
+        await Cart.deleteMany({ username: req.session.user._id });
+
+        // Fetch updated order history
         const orderHistory = await Orders.find({ username: req.session.user._id });
-        res.render("history", { order: orderHistory });
+
+        res.redirect(session.url)
+        console.log(session)
+        // res.render("history", { order: orderHistory, clientSecret: paymentIntent.client_secret });
     } catch (err) {
         console.error(err);
         res.render("error");
     }
 });
 
-// 📜 **GET: Order History**
+//  **GET: Order History**
 app.get("/history", isLoggedIn, async (req, res) => {
     try {
         const orders = await Orders.find({ username: req.session.user._id });
@@ -934,6 +1035,37 @@ app.post("/verify-otp", (req, res) => {
 
 
 
+app.post("/verification/huhaha", isLoggedIn, async (req, res) => {
+    try {
+        // Find user by mobile number
+        const user = await Users.findOne({ mobile_number: req.body.mobile_number });
+
+        if (!user) {
+            console.log("No user found with this mobile number");
+            return res.render("login");
+        }
+
+        // Compare provided password with stored hash
+        const isMatch = await bcrypt.compare(req.body.password, user.password_hash);
+        if (!isMatch) {
+            console.log("Incorrect password");
+            return res.render("login");
+        }
+
+        console.log("User authenticated");
+        req.session.extraAuth = true;
+        res.redirect(req.session.pendingUrl);
+
+    } catch (err) {
+        console.error("Login Error:", err);
+        res.render("login");
+    }
+}); 
+
+
+
+
+
 // Endpoint to fetch logs
 app.get('/admin/logs', isAdmin, (req, res) => {
     try {
@@ -1036,7 +1168,7 @@ app.post("/login", async function(req, res) {
 
 
 // POST Update Profile
-app.post("/profile/update", isLoggedIn, isLoggedIn, upload.single("profile_picture"), async (req, res) => {
+app.post("/profile/update", isLoggedIn, upload.single("profile_picture"), async (req, res) => {
     try {
         const userId = req.session.user.user_id; // Get UUID from session
 
