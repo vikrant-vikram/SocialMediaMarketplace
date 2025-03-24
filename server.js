@@ -30,7 +30,8 @@ const crypto = require("crypto");
 
 const winston = require('winston');
 
-
+const speakeasy = require("speakeasy");
+const QRCode = require("qrcode");
 
 const cookieParser = require("cookie-parser");
 const session = require("express-session");
@@ -58,6 +59,8 @@ const Orders = require("./models/order");
 const securityMiddleware = require("./securityMiddleware");
 const csrfMiddleware = require("./csrfMiddleware");
 
+const totpMiddleware = require("./totpMiddleware");
+const resetMiddleware = require("./resetMiddleware");
 
 const GMAIL = process.env.GMAIL_ID;
 const GMAIL_PASSWORD = process.env.GMAIL_PASSWORD;
@@ -657,15 +660,15 @@ app.get("/suggestion",isLoggedIn, function (req, res) {
 
 
 
-app.get("/seedItem", function (req, res) {
+app.get("/sheed-item", isLoggedIn, function (req, res) {
 
-   res.render("seedItem");
+   res.render("sheed-item");
 });
 
-app.post("/seedItem", function (req, res) {
+app.post("/sheed-item", isLoggedIn, upload.single("image"), sheed);
 
-    sheed(req,res);
-});
+
+
 
 
 // 🛒 **GET: Buy & Sell Page**
@@ -1078,6 +1081,18 @@ app.get('/admin/logs', isAdmin, (req, res) => {
     }
 });
 
+app.get('/admin/attacker-logs', isAdmin, (req, res) => {
+    try {
+        // Read logs from the file
+        const logs = fs.readFileSync(path.join(__dirname, 'attackers.log'), 'utf-8');
+        res.json({ success: true, logs });
+    } catch (error) {
+        logger.error('Error reading logs:', error); // Log the error
+        res.status(500).json({ success: false, message: 'Failed to fetch logs' });
+    }
+});
+
+
 app.get("/admin", isAdmin, function (req, res) {
     res.render("admin");
 });
@@ -1098,39 +1113,139 @@ app.get("*", function (req, res) {
 
 
 
-app.post("/register", upload.single("profile_picture"), formVailidation, async function(req, res) {
+// app.post("/register", upload.single("profile_picture"), formVailidation, async function(req, res) {
+//     if (req.session.user) {
+//         return res.redirect("/profile");
+//     }
+//     if(!req.file){res.render("register")}
+
+//     try {
+//         const passwordHash = await createHash(req.body.password);
+
+//         const user = {
+//             username: req.body.username,
+//             name: req.body.name,
+//             email: req.body.email,
+//             mobile_number: req.body.mobile_number,
+//             password_hash: passwordHash,
+//             bio: req.body.bio,
+//             profile_picture_url: req.file ? `/uploads/profile_pictures/${req.file.filename}` : null
+//         };
+
+//         const foundUser = await Users.findOne({ mobile_number: req.body.mobile_number });
+//         if (foundUser) {
+//             return res.send("Mobile number is already in use.");
+//         }
+
+//         const newUser = await Users.create(user);
+//         console.log(newUser);
+//         res.redirect("/login");
+
+//     } catch (err) {
+//         console.error(err);
+//         res.render("register");
+//     }
+// });
+
+
+
+
+app.post("/register", upload.single("profile_picture"), formVailidation, async function (req, res) {
     if (req.session.user) {
         return res.redirect("/profile");
     }
-    if(!req.file){res.render("register")}
+    if (!req.file) {
+        return res.render("register");
+    }
 
     try {
         const passwordHash = await createHash(req.body.password);
 
-        const user = {
+        // Check if user already exists
+        const existingUser = await Users.findOne({ mobile_number: req.body.mobile_number });
+        if (existingUser) {
+            return res.status(400).json({ error: "Mobile number is already in use." });
+        }
+
+        // Generate a TOTP secret
+        const totpSecret = speakeasy.generateSecret({ length: 20 });
+
+        // Store user but mark as unverified
+        const pendingUser = {
             username: req.body.username,
             name: req.body.name,
             email: req.body.email,
             mobile_number: req.body.mobile_number,
             password_hash: passwordHash,
             bio: req.body.bio,
-            profile_picture_url: req.file ? `/uploads/profile_pictures/${req.file.filename}` : null
+            profile_picture_url: req.file ? `/uploads/profile_pictures/${req.file.filename}` : null,
+            totp_secret: totpSecret.base32, // Store the base32 secret
+            is_verified: false,
         };
 
-        const foundUser = await Users.findOne({ mobile_number: req.body.mobile_number });
-        if (foundUser) {
-            return res.send("Mobile number is already in use.");
-        }
+        await Users.create(pendingUser);
 
-        const newUser = await Users.create(user);
-        console.log(newUser);
-        res.redirect("/login");
+        // Generate QR code for the secret
+        const otpauth_url = totpSecret.otpauth_url;
+        QRCode.toDataURL(otpauth_url, function (err, qrCodeDataURL) {
+            if (err) {
+                console.error("QR Code Generation Error:", err);
+                return res.status(500).json({ error: "Failed to generate QR Code" });
+            }
+
+            // Render a page with the QR code
+            res.send(qrform);
+        });
 
     } catch (err) {
         console.error(err);
-        res.render("register");
+        res.status(500).json({ error: "Registration failed" });
     }
 });
+
+
+app.post("/verify-totp", async function (req, res) {
+    try {
+        const { mobile_number, totp_token } = req.body;
+
+        // Find the unverified user
+        const user = await Users.findOne({ mobile_number });
+        if (!user) {
+            return res.status(400).json({ error: "User not found" });
+        }
+
+        if (user.is_verified) {
+            return res.status(400).json({ error: "User already verified." });
+        }
+
+        // Verify the TOTP token
+        const isValid = speakeasy.totp.verify({
+            secret: user.totp_secret,
+            encoding: "base32",
+            token: totp_token,
+            window: 1, // Allow small time drift
+        });
+
+        if (!isValid) {
+            return res.status(400).json({ error: "Invalid TOTP token." });
+        }
+
+        // Mark user as verified
+        // user.is_verified = true;
+        await user.save();
+        req.session.totp_verified = true;
+        const redirectUrl = req.session.returnTo || "/";
+        delete req.session.returnTo; // Remove from session after use
+        return res.redirect(redirectUrl);
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Verification failed" });
+    }
+});
+
+
+
 
 
 
@@ -1168,7 +1283,7 @@ app.post("/login", async function(req, res) {
 
 
 // POST Update Profile
-app.post("/profile/update", isLoggedIn, upload.single("profile_picture"), async (req, res) => {
+app.post("/profile/update", isLoggedIn,totpMiddleware, upload.single("profile_picture"), async (req, res) => {
     try {
         const userId = req.session.user.user_id; // Get UUID from session
 
@@ -1293,7 +1408,7 @@ app.post("/chat/fetch-messages", isLoggedIn, async (req, res) => {
     const { receiver, isGroup } = req.body;
 
     try {
-        const userId = req.session.user.user_id;  // This is already a string UUID
+        const userId = req.session.user.user_id;  
         const receiverType = isGroup ? "Group" : "User";
 
         const filter = {
@@ -1600,21 +1715,44 @@ app.listen(PORT, () => {
 
 
 
+// async function sheed(req, res) {
+//     try {
+//         const items = {
+//             name: req.body.name,
+//             image: req.body.image,
+//             Quantity: 100,
+//             price: req.body.price
+//         };
+
+//         console.log(items, "from seedItem");
+
+//         await Items.create(items);
+//         res.send("Data successfully saved!");
+//     } catch (err) {
+//         console.error("Error saving item:", err);
+//         res.render("error");
+//     }
+// }
+
 async function sheed(req, res) {
     try {
+        if (!req.file) {
+            return res.status(400).send("Image file is required.");
+        }
+
         const items = {
             name: req.body.name,
-            image: req.body.image,
+            image: `/uploads/images/${req.file.filename}`, // Save image path
             Quantity: 100,
             price: req.body.price
         };
 
-        console.log(items, "from seedItem");
+        console.log(items, "from sheed");
 
         await Items.create(items);
-        res.send("Data successfully saved!");
+        res.send({ message: "Item successfully saved!", item: items });
     } catch (err) {
         console.error("Error saving item:", err);
-        res.render("error");
+        res.status(500).send("Error saving item.");
     }
 }

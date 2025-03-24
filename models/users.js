@@ -14,7 +14,8 @@ const userSchema = new mongoose.Schema({
     bio: { type: String },
     is_suspended: { type: Boolean, default: false },
     created_at: { type: Date, default: Date.now },
-    updated_at: { type: Date, default: Date.now }
+    updated_at: { type: Date, default: Date.now },
+    totp_secret: { type: String }, // Store TOTP secret
 });
 
 module.exports = mongoose.model("User", userSchema);

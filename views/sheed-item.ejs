@@ -1,0 +1,95 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload Item</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            flex-direction: column;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+            width: 300px;
+            text-align: center;
+        }
+        input, button {
+            width: 100%;
+            padding: 10px;
+            margin: 8px 0;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        button {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #218838;
+        }
+        #message {
+            margin-top: 10px;
+            color: red;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Upload Item</h2>
+        <form id="uploadForm">
+            <input type="text" id="name" placeholder="Item Name" required>
+            <input type="number" id="price" placeholder="Price" required>
+            <input type="file" id="image" accept="image/*" required>
+            <button type="submit">Upload</button>
+        </form>
+        <p id="message"></p>
+    </div>
+
+    <script>
+        document.getElementById("uploadForm").addEventListener("submit", async function (event) {
+            event.preventDefault();
+
+            const name = document.getElementById("name").value;
+            const price = document.getElementById("price").value;
+            const image = document.getElementById("image").files[0];
+            const message = document.getElementById("message");
+
+            if (!name || !price || !image) {
+                message.textContent = "All fields are required!";
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append("image", image);
+            formData.append("name", name);
+            formData.append("price", price);
+
+            try {
+                const response = await fetch("/sheed-item", {
+                    method: "POST",
+                    body: formData
+                });
+
+                const data = await response.json();
+                message.textContent = data.message;
+                message.style.color = "green";
+            } catch (error) {
+                message.textContent = "Upload failed!";
+                console.error("Error uploading item:", error);
+            }
+        });
+    </script>
+</body>
+</html>
