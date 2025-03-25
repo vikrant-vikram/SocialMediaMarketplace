@@ -61,6 +61,7 @@ const csrfMiddleware = require("./csrfMiddleware");
 
 const totpMiddleware = require("./totpMiddleware");
 const resetMiddleware = require("./resetMiddleware");
+const { send } = require("process");
 
 const GMAIL = process.env.GMAIL_ID;
 const GMAIL_PASSWORD = process.env.GMAIL_PASSWORD;
@@ -385,10 +386,18 @@ app.get("/blockunblock",isLoggedIn,function (req, res) {
 
 
 
+app.get("/privacypolicy", function (req, res) {
+    res.render("privacypolicy");
+});
 
 
 
-
+app.get("/faq", function (req, res) {
+    res.render("faq");
+});
+app.get("/generalterms", function (req, res) {
+    res.render("generalterms");
+});
 
 
 
@@ -863,6 +872,9 @@ app.get("/history", isLoggedIn, async (req, res) => {
 
 
 
+
+
+
 app.post("/admin-login", async function (req, res) {
     const { email, password } = req.body;
     const ip = req.headers["x-forwarded-for"] || req.socket.remoteAddress;
@@ -1101,6 +1113,57 @@ app.get("/admin", isAdmin, function (req, res) {
 
 
 
+app.get("/verifyemail", async function(req, res) { 
+    console.log("Email Verification Request:", req.session.email);
+    const email = req.session.email;
+    delete  req.session.email;
+    console.log("Sending OTP to:", email, GMAIL, GMAIL_PASSWORD);
+    const otp = crypto.randomInt(100000, 999999); // Generate a 6-digit OTP
+
+    otpStorage[email] = otp; // Store OTP temporarily
+
+    const mailOptions = {
+        from: GMAIL,
+        to: email,
+        subject: "🔐 Your One-Time Password (OTP) for Secure Access",
+        html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px; box-shadow: 2px 2px 10px rgba(0,0,0,0.1);">
+            <h2 style="color: #2C3E50; text-align: center;">🔐 Secure Access OTP</h2>
+            <p style="font-size: 16px; color: #555;">Hello,</p>
+            <p style="font-size: 16px; color: #555;">Thank you for using our service! To complete your verification, please use the following One-Time Password (OTP):</p>
+            <div style="text-align: center; font-size: 24px; font-weight: bold; padding: 15px; background-color: #f4f4f4; border-radius: 5px; margin: 10px 0;">
+                ${otp}
+            </div>
+            <p style="font-size: 16px; color: #555;">This OTP is valid for a limited time. Please do not share it with anyone for security reasons.</p>
+            <p style="font-size: 16px; color: #555;">If you did not request this OTP, please ignore this email or contact our support team immediately.</p>
+            <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
+            <p style="text-align: center; font-size: 14px; color: #777;">
+                🔒 Stay Secure, Stay Safe.<br>
+                <strong>YHame Complny Name Pta Nahi hai</strong><br>
+                📩 Contact us: <a href="mailto:randomcollegemail@iiitd.ac.in" style="color: #3498DB;">randomcollegemail@iiiitd.ac.in</a>
+            </p>
+        </div>`
+    };
+
+    transporter.sendMail(mailOptions, (error) => {
+        if (error) {
+            console.log("Error sending email:", error);
+            return res.send("Error sending OTP. Try again.");
+        }
+
+        res.send(`
+            <h2>Verify Your Email</h2>
+            <form action="/verifyemail" method="POST">
+                <input type="hidden" name="email" value="${email}" />
+                <input type="text" name="otp" placeholder="Enter OTP" required />
+                <button type="submit">Verify</button>
+            </form>
+        `);
+    });
+
+});
+
+
 
 
 // =========================================================================== * ===================================================================================================
@@ -1196,7 +1259,79 @@ app.post("/register", upload.single("profile_picture"), formVailidation, async f
             }
 
             // Render a page with the QR code
-            res.send(qrform);
+            res.send(`
+                <!DOCTYPE html>
+                <html lang="en">
+                <head>
+                    <meta charset="UTF-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <title>🔐 TOTP Verification</title>
+                    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+                    <style>
+                        body {
+                            background-color: #f4f4f4;
+                            display: flex;
+                            justify-content: center;
+                            align-items: center;
+                            height: 100vh;
+                            text-align: center;
+                        }
+                        .container {
+                            background: white;
+                            padding: 30px;
+                            border-radius: 10px;
+                            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+                            max-width: 400px;
+                            width: 100%;
+                        }
+                        img {
+                            margin: 20px 0;
+                            width: 200px;
+                            height: 200px;
+                        }
+                        input {
+                            width: 100%;
+                            padding: 10px;
+                            margin: 10px 0;
+                            border-radius: 5px;
+                            border: 1px solid #ddd;
+                            font-size: 16px;
+                            text-align: center;
+                        }
+                        button {
+                            width: 100%;
+                            padding: 10px;
+                            background-color: #007bff;
+                            color: white;
+                            border: none;
+                            font-size: 16px;
+                            border-radius: 5px;
+                            cursor: pointer;
+                            transition: 0.3s ease;
+                        }
+                        button:hover {
+                            background-color: #0056b3;
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <h2>🔒 Scan & Verify</h2>
+                        <p>Scan this QR Code with Google Authenticator</p>
+                        <img src="${qrCodeDataURL}" alt="TOTP QR Code">
+                        <p>"${totpSecret.base32}</p>
+                        <p>Once scanned, enter the 6-digit code from your app.</p>
+
+                        <form action="/verify-totp" method="POST">
+                            <input type="hidden" name="mobile_number" value="${req.body.mobile_number}">
+                            <label for="totp_token">Enter TOTP Code:</label>
+                            <input type="text" name="totp_token" pattern="\\d{6}" title="6-digit TOTP Code" required placeholder="123456">
+                            <button type="submit">Verify</button>
+                        </form>
+                    </div>
+                </body>
+                </html>
+            `);
         });
 
     } catch (err) {
@@ -1290,11 +1425,49 @@ app.post("/verify-totp", async function (req, res) {
 
 
 
+// Email Verification Route
+app.post("/verifyemail", async (req, res) => {
+    const { email, otp } = req.body;
+    console.log("Email Verification Request:", email, otp, otpStorage[email]);
+
+
+    try {
+        const user = await Users.findOne({ email });
+
+        if (!user) {
+            return res.status(400).json({ error: "User not found." });
+        }
+
+        if (!otpStorage[email] || otpStorage[email] !== otp) {
+            return res.status(400).json({ error: "Incorrect OTP." });
+        }
+
+        // Mark email as verified
+        user.email_verified = true;
+        await user.save();
+
+        // Remove OTP from storage after successful verification
+        delete otpStorage[email];
+
+        return res.render("/login");
+
+    } catch (err) {
+        console.error("Email Verification Error:", err);
+        res.status(500).json({ error: "Email verification failed." });
+    }
+});
 
 
 
 
-app.post("/login", totpMiddleware, resetMiddleware, async function(req, res) {
+
+
+
+
+
+
+
+app.post("/login", async function(req, res) {
     if (req.session.user) {
         return res.redirect("/profile");
     }
@@ -1306,7 +1479,97 @@ app.post("/login", totpMiddleware, resetMiddleware, async function(req, res) {
 
         if (!user) {
             console.log("No user found with this mobile number");
-            return res.render("login");
+            return res.redirect("/login");
+        }
+
+
+        // Unable Once Your Accoundt Have been Revoked
+        // if(user.email_verified == false){
+        //     req.session.email = user.email;
+        //     console.log("Email not verified");
+        //     return res.redirect("/verifyemail");
+        //     };
+        if(!user.totp_secret){        
+            const otpauth_url = totpSecret.otpauth_url;
+            QRCode.toDataURL(otpauth_url, function (err, qrCodeDataURL) {
+                if (err) {
+                    console.error("QR Code Generation Error:", err);
+                    return res.status(500).json({ error: "Failed to generate QR Code" });
+                }
+                // Render a page with the QR code
+                res.send(`
+                    <!DOCTYPE html>
+                    <html lang="en">
+                    <head>
+                        <meta charset="UTF-8">
+                        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                        <title>🔐 TOTP Verification</title>
+                        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+                        <style>
+                            body {
+                                background-color: #f4f4f4;
+                                display: flex;
+                                justify-content: center;
+                                align-items: center;
+                                height: 100vh;
+                                text-align: center;
+                            }
+                            .container {
+                                background: white;
+                                padding: 30px;
+                                border-radius: 10px;
+                                box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+                                max-width: 400px;
+                                width: 100%;
+                            }
+                            img {
+                                margin: 20px 0;
+                                width: 200px;
+                                height: 200px;
+                            }
+                            input {
+                                width: 100%;
+                                padding: 10px;
+                                margin: 10px 0;
+                                border-radius: 5px;
+                                border: 1px solid #ddd;
+                                font-size: 16px;
+                                text-align: center;
+                            }
+                            button {
+                                width: 100%;
+                                padding: 10px;
+                                background-color: #007bff;
+                                color: white;
+                                border: none;
+                                font-size: 16px;
+                                border-radius: 5px;
+                                cursor: pointer;
+                                transition: 0.3s ease;
+                            }
+                            button:hover {
+                                background-color: #0056b3;
+                            }
+                        </style>
+                    </head>
+                    <body>
+                        <div class="container">
+                            <h2>🔒 Scan & Verify</h2>
+                            <p>Scan this QR Code with Google Authenticator</p>
+                            <img src="${qrCodeDataURL}" alt="TOTP QR Code">
+                            <p>Once scanned, enter the 6-digit code from your app.</p>
+
+                            <form action="/verify-totp" method="POST">
+                                <input type="hidden" name="mobile_number" value="${req.body.mobile_number}">
+                                <label for="totp_token">Enter TOTP Code:</label>
+                                <input type="text" name="totp_token" pattern="\\d{6}" title="6-digit TOTP Code" required placeholder="123456">
+                                <button type="submit">Verify</button>
+                            </form>
+                        </div>
+                    </body>
+                    </html>
+                `);
+            });
         }
 
         // Compare provided password with stored hash
@@ -1325,6 +1588,10 @@ app.post("/login", totpMiddleware, resetMiddleware, async function(req, res) {
         res.render("login");
     }
 });
+
+
+
+
 
 
 // POST Update Profile
@@ -1801,3 +2068,4 @@ async function sheed(req, res) {
         res.status(500).send("Error saving item.");
     }
 }
+
