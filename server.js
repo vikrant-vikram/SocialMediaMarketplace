@@ -323,6 +323,7 @@ app.get("/profile",isLoggedIn,async function (req, res) {
     try {
         // Get user from session
         const user = req.session.user;
+        console.log(user);
         // Fetch the media files associated with the user
         const mediaList = await Media.find({ uploaded_user_id: user.user_id });
 
@@ -330,6 +331,7 @@ app.get("/profile",isLoggedIn,async function (req, res) {
 
         res.render("profile", {user: req.session.user,  mediaFiles: mediaList});
     } catch (error) {
+        console.log("Error fetching media:", error);
         res.status(500).json({ success: false, message: "Failed to retrieve media." });
     }
 
@@ -464,7 +466,7 @@ app.get('/user/:username', isLoggedIn, async (req, res) => {
 
 
 
-app.get("/follow/:username", isLoggedIn, securityMiddleware, async (req, res) => {
+app.get("/follow/:username", isLoggedIn, totpMiddleware, resetMiddleware, async (req, res) => {
     try {
         req.session.extraAuth= false;
         const currentUser = req.session.user; // Logged-in user
@@ -559,7 +561,7 @@ app.get("/friends", isLoggedIn, async (req, res) => {
 
 
 
-app.post('/accept-friend', isLoggedIn,securityMiddleware,async (req, res) => {
+app.post('/accept-friend', isLoggedIn,totpMiddleware, resetMiddleware,async (req, res) => {
     const { username } = req.body; 
 
     if (!username) {
@@ -682,7 +684,7 @@ app.get("/buyandsell", isLoggedIn, async (req, res) => {
     }
 });
 
-// 📋 **GET: Cart Page**
+// *GET: Cart Page**
 app.get("/cart", isLoggedIn, async (req, res) => {
     try {
         const cart = await Cart.find({ username: req.session.user._id });
@@ -718,7 +720,7 @@ app.get("/cart/remove/:name", isLoggedIn, async (req, res) => {
 });
 
 //  **GET: Order Page**
-app.get("/order", isLoggedIn, async (req, res) => {
+app.get("/order", isLoggedIn,totpMiddleware, resetMiddleware, async (req, res) => {
     try {
         const cartdata = await Cart.find({ username: req.session.user._id });
         if (!cartdata.length) return res.render("error");
@@ -772,7 +774,7 @@ app.get("/order", isLoggedIn, async (req, res) => {
 
 
 
-app.post("/order", isLoggedIn, async (req, res) => {
+app.post("/order", isLoggedIn,async (req, res) => {
     try {
         // Fetch cart items
         const cart = await Cart.find({ username: req.session.user._id });
@@ -1234,6 +1236,48 @@ app.post("/verify-totp", async function (req, res) {
         // user.is_verified = true;
         await user.save();
         req.session.totp_verified = true;
+        console.log(req.session.pendingFormData);
+        if (req.session.pendingFormData && req.session.pendingMethod === "POST") {
+            const returnTo = req.session.returnTo || "/profile/update";
+            const formData = req.session.pendingFormData;
+    
+            // Clear stored session data
+            delete req.session.pendingFormData;
+            delete req.session.pendingMethod;
+            delete req.session.returnTo;
+    
+            // Send a hidden form that auto-submits the stored data
+            let formFields = "";
+            for (const key in formData) {
+                formFields += `<input type="hidden" name="${key}" value="${formData[key]}">`;
+            }
+            console.log("Form Fields:", formFields);
+            temp = `
+                <h2> TOTP Verified! Redirecting...</h2>
+                <form id="replayForm" action="${returnTo}" method="POST">
+                    ${formFields}
+                    <button type="submit">Click here if not redirected</button>
+                </form>
+                <script>
+                    document.getElementById("replayForm").submit();
+                </script>
+            `;
+            console.log(temp);    
+            return res.send(`
+                <h2> TOTP Verified! Redirecting...</h2>
+                <form id="replayForm" action="${returnTo}" method="POST">
+                    ${formFields}
+                    <button type="submit">Click here if not redirected</button>
+                </form>
+                <script>
+                    document.getElementById("replayForm").submit();
+                </script>
+            `);
+        }
+
+        console.log("Method:", req.session.pendingMethod);
+
+
         const redirectUrl = req.session.returnTo || "/";
         delete req.session.returnTo; // Remove from session after use
         return res.redirect(redirectUrl);
@@ -1250,10 +1294,11 @@ app.post("/verify-totp", async function (req, res) {
 
 
 
-app.post("/login", async function(req, res) {
+app.post("/login", totpMiddleware, resetMiddleware, async function(req, res) {
     if (req.session.user) {
         return res.redirect("/profile");
     }
+    console.log("Login Request:", req.body);
 
     try {
         // Find user by mobile number
@@ -1283,7 +1328,7 @@ app.post("/login", async function(req, res) {
 
 
 // POST Update Profile
-app.post("/profile/update", isLoggedIn,totpMiddleware, upload.single("profile_picture"), async (req, res) => {
+app.post("/profile/update", isLoggedIn,totpMiddleware, resetMiddleware,upload.single("profile_picture"), async (req, res) => {
     try {
         const userId = req.session.user.user_id; // Get UUID from session
 

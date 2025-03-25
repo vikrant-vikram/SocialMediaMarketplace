@@ -2,7 +2,9 @@
 
 
 const resetMiddleware = (req, res, next) => {
-    req.session.totp_verified = false;
+    // req.body = req.session.pendingFormData;
+    console.log("Reset Middleware", req.body);
+    delete req.session.totp_verified;
     console.log("TOTP Reset");
     next();
   };
