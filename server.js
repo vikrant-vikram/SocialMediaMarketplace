@@ -395,6 +395,7 @@ app.get("/privacypolicy", function (req, res) {
 app.get("/faq", function (req, res) {
     res.render("faq");
 });
+
 app.get("/generalterms", function (req, res) {
     res.render("generalterms");
 });
@@ -618,6 +619,143 @@ app.post('/accept-friend', isLoggedIn,totpMiddleware, resetMiddleware,async (req
 
 
 
+
+
+
+
+
+
+
+// app.get('/verifyusers', isAdmin, async (req, res) => {
+//   try {
+//     const users = await Users.find({}, {
+//       user_id: 1,
+//       username: 1,
+//       name: 1,
+//       email: 1,
+//       advance_verified: 1,
+//       created_at: 1,
+//       _id: 0
+//     }).sort({ created_at: -1 });
+//     console.log("Fetched users for verification:", users);
+    
+    
+//     res.render('verifyusers', { users });
+    
+//   } catch (error) {
+//     console.error('Error fetching users:', error);
+//     res.status(500).send('Server Error');
+//   }
+// });
+
+
+// app.put('/admin/users/:userId/verify', isAdmin, async (req, res) => {
+//     console.log("Admin verification endpoint accessed");
+//     console.log("Request body:", req.body);
+//   try {
+//     const { userId } = req.params;
+//     const { verified } = req.body;
+
+//     const updatedUser = await Users.findOneAndUpdate(
+//       { user_id: userId },
+//       { advance_verified: verified, updated_at: Date.now() },
+//       { new: true, projection: { _id: 0, password_hash: 0 } }
+//     );
+
+//     console.log("Updated user:", updatedUser);
+
+//     if (!updatedUser) {
+//       return res.status(404).json({ success: false, message: 'User not found' });
+//     }
+//     console.log("User verification updated:", updatedUser);
+//     // Log the admin action
+
+//     res.json({ success: true, user: updatedUser });
+//   } catch (error) {
+//     console.error('Error updating verification:', error);
+//     res.status(500).json({ success: false, message: 'Server Error' });
+//   }
+// });
+
+
+
+
+
+// Admin dashboard - render EJS template
+app.get('/verifyusers', isAdmin, async (req, res) => {
+  try {
+    const users = await Users.find({}, {
+      user_id: 1,
+      username: 1,
+      name: 1,
+      email: 1,
+      advance_verified: 1,
+      is_suspended: 1,
+      created_at: 1,
+      _id: 0
+    }).sort({ created_at: -1 });
+    
+    res.render('verifyusers', { users });
+  } catch (error) {
+    console.error('Error fetching users:', error);
+    res.status(500).send('Server Error');
+  }
+});
+
+// Handle verification toggle
+app.put('/admin/users/:userId/verify', isAdmin, async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { verified } = req.body;
+
+    const updatedUser = await Users.findOneAndUpdate(
+      { user_id: userId },
+      { advance_verified: verified, updated_at: Date.now() },
+      { new: true, projection: { _id: 0, password_hash: 0 } }
+    );
+
+    if (!updatedUser) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    res.json({ success: true, user: updatedUser });
+  } catch (error) {
+    console.error('Error updating verification:', error);
+    res.status(500).json({ success: false, message: 'Server Error' });
+  }
+});
+
+// Handle suspension toggle
+app.put('/admin/users/:userId/suspend', isAdmin, async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { suspended } = req.body;
+
+    const updatedUser = await Users.findOneAndUpdate(
+      { user_id: userId },
+      { is_suspended: suspended, updated_at: Date.now() },
+      { new: true, projection: { _id: 0, password_hash: 0 } }
+    );
+
+    if (!updatedUser) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    res.json({ success: true, user: updatedUser });
+  } catch (error) {
+    console.error('Error updating suspension status:', error);
+    res.status(500).json({ success: false, message: 'Server Error' });
+  }
+});
+
+
+
+
+
+
+
+
+
 // ====================================================CHekc ===================================================
 
 app.get("/prediction", function (req, res) {
@@ -823,7 +961,7 @@ app.post("/order", isLoggedIn,async (req, res) => {
                         product_data: {
                             name: "Order",
                         },
-                        unit_amount: totalAmount * 100, // Stripe expects the amount in the smallest currency unit (paise)
+                        unit_amount: totalAmount, // Stripe expects the amount in the smallest currency unit (paise)
                     },
                     quantity: 1, // Adjust the quantity if needed
                 },
