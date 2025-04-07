@@ -32,7 +32,7 @@
                         </div>
                     <% } else { %>
                         <div class="cta">
-                            <button onclick=""><%= friendship.status %></button>
+                            <button onclick="window.location.href='/follow/<%= user.username %>'"><%= friendship.status %></button>
                         </div>
                     <% } %>
 

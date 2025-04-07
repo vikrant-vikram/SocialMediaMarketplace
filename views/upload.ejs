@@ -1,27 +1,47 @@
 <%- include('parcials/before_import') %>
 <link rel="stylesheet" href="/css/search.css" />
 
-<!-- locomotive-scroll -->
+<!-- Locomotive Scroll -->
 <link
     rel="stylesheet"
     href="https://cdn.jsdelivr.net/npm/locomotive-scroll@3.2.5/dist/locomotive-scroll.min.css"
 />
 <script src="https://cdn.jsdelivr.net/npm/locomotive-scroll@3.2.5/dist/locomotive-scroll.min.js"></script>
+
 <%- include('parcials/after_import') %>
+
 <body id="js-scroll">
     <div class="wrapper">
-    <div class="container">
+        <div class="container">
 
-        <!-- navbar -->
-    <%- include('parcials/nav') %>
+            <!-- Navbar -->
+            <%- include('parcials/nav') %>
 
-    <h2>Upload Photo</h2>
-    <input type="file" id="photoInput">
-    <button onclick="uploadFile('photo', '/upload/photo')">Upload Photo</button>
+            <div class="upload-section">
+                <h1>Upload Your Media</h1>
 
-    <h2>Upload Video</h2>
-    <input type="file" id="videoInput">
-    <button onclick="uploadFile('video', '/upload/video')">Upload Video</button>
+                <!-- Photo Upload -->
+                <div class="upload-box">
+                    <h2>Upload Photo</h2>
+                    <input type="file" id="photoInput" accept="image/*">
+                    <button class="upload-btn" onclick="uploadFile('photo', '/upload/photo')">Upload</button>
+                </div>
+
+                <!-- Video Upload -->
+                <div class="upload-box">
+                    <h2>Upload Video</h2>
+                    <input type="file" id="videoInput" accept="video/*">
+                    <button class="upload-btn" onclick="uploadFile('video', '/upload/video')">Upload</button>
+                </div>
+
+                <!-- Loading Indicator -->
+                <div id="loading" class="loading">Uploading...</div>
+            </div>
+
+        </div>
+    </div>
+
+    <%- include('parcials/footer') %>
 
     <script>
         async function uploadFile(inputId, endpoint) {
@@ -31,18 +51,104 @@
                 return;
             }
 
+            const file = fileInput.files[0];
+
+            // Validate file size (Max 5MB)
+            if (file.size > 5 * 1024 * 1024) {
+                alert("File size must be less than 5MB.");
+                return;
+            }
+
+            // Show loading indicator
+            document.getElementById("loading").style.display = "block";
+
             const formData = new FormData();
-            formData.append(inputId, fileInput.files[0]);
+            formData.append(inputId, file);
 
-            const response = await fetch(endpoint, {
-                method: "POST",
-                body: formData
-            });
+            try {
+                const response = await fetch(endpoint, {
+                    method: "POST",
+                    body: formData
+                });
 
-            const result = await response.json();
-            alert(result.message);
-            console.log(result);
+                const result = await response.json();
+                alert(result.message);
+                console.log(result);
+            } catch (error) {
+                alert("Upload failed. Please try again.");
+                console.error(error);
+            } finally {
+                // Hide loading indicator
+                document.getElementById("loading").style.display = "none";
+            }
         }
     </script>
-<%- include('parcials/footer') %>
 
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f5f5f5;
+            margin: 0;
+            padding: 0;
+            text-align: center;
+        }
+
+        .upload-section {
+            max-width: 500px;
+            margin: 50px auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .upload-box {
+            margin: 20px 0;
+            padding: 15px;
+            border: 2px dashed #007BFF;
+            border-radius: 10px;
+            background: #f9f9f9;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        h2 {
+            color: #007BFF;
+            margin-bottom: 10px;
+        }
+
+        input[type="file"] {
+            margin: 10px 0;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            display: block;
+            width: 100%;
+            background: white;
+        }
+
+        .upload-btn {
+            background: #007BFF;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: 0.3s ease;
+        }
+
+        .upload-btn:hover {
+            background: #0056b3;
+        }
+
+        .loading {
+            display: none;
+            margin-top: 20px;
+            font-weight: bold;
+            color: #FF5733;
+        }
+    </style>
+</body>

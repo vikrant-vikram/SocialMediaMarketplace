@@ -477,9 +477,52 @@ app.get('/user/:username', isLoggedIn, async (req, res) => {
 
 
 
+// app.get("/follow/:username", isLoggedIn, totpMiddleware, resetMiddleware, async (req, res) => {
+//     try {
+//         req.session.extraAuth= false;
+//         const currentUser = req.session.user; // Logged-in user
+//         const targetUser = await Users.findOne({ username: req.params.username });
+
+//         console.log("Following user:", targetUser);
+//         console.log("Current user:", currentUser);
+
+//         // If no target user is found, redirect to a search or error page
+//         if (!targetUser) {
+//             return res.redirect("/search"); // Or a custom error page
+//         }
+
+//         // Check if a follow request already exists
+//         const existingFollow = await Friendship.findOne({
+//             user_id: currentUser._id,
+//             friend_id_or_follow_id: targetUser._id,
+//         });
+
+//         // If the user is already following, redirect to the profile page
+//         if (existingFollow) {
+//             return res.redirect(`/user/${targetUser.username}`);
+//         }
+
+//         // Create a new follow request if no existing request is found
+//         const followRequest = new Friendship({
+//             relationship_id: Math.floor(Math.random() * 1000000), // Generate a unique ID
+//             user_id: currentUser._id,
+//             friend_id_or_follow_id: targetUser._id,
+//             status: "Pending",
+//         });
+
+//         await followRequest.save();
+
+//         // Respond with success message or redirect to the target user's profile
+//         return res.redirect(`/user/${targetUser.username}`); // Redirect to target user's profile page
+//     } catch (error) {
+//         console.error("Error following user:", error);
+//         res.status(500).json({ error: "Internal server error" });
+//     }
+// });
+
 app.get("/follow/:username", isLoggedIn, totpMiddleware, resetMiddleware, async (req, res) => {
     try {
-        req.session.extraAuth= false;
+        req.session.extraAuth = false;
         const currentUser = req.session.user; // Logged-in user
         const targetUser = await Users.findOne({ username: req.params.username });
 
@@ -497,8 +540,12 @@ app.get("/follow/:username", isLoggedIn, totpMiddleware, resetMiddleware, async 
             friend_id_or_follow_id: targetUser._id,
         });
 
-        // If the user is already following, redirect to the profile page
         if (existingFollow) {
+            // If the existing request is pending, remove it from the Friendship table
+            if (existingFollow.status === "Pending") {
+                await Friendship.deleteOne({ _id: existingFollow._id });
+                console.log("Pending follow request removed.");
+            }
             return res.redirect(`/user/${targetUser.username}`);
         }
 
@@ -511,16 +558,15 @@ app.get("/follow/:username", isLoggedIn, totpMiddleware, resetMiddleware, async 
         });
 
         await followRequest.save();
+        console.log("New follow request created.");
 
-        // Respond with success message or redirect to the target user's profile
-        return res.redirect(`/user/${targetUser.username}`); // Redirect to target user's profile page
+        // Redirect to the target user's profile page
+        return res.redirect(`/user/${targetUser.username}`);
     } catch (error) {
         console.error("Error following user:", error);
         res.status(500).json({ error: "Internal server error" });
     }
 });
-
-
 
 
 app.get("/followrequest", isLoggedIn, async (req, res) => {
@@ -796,10 +842,6 @@ app.get("/dashboard",isLoggedIn, function (req, res) {
     res.render("dashboard");
 });
 
-
-app.get("/suggestion",isLoggedIn, function (req, res) {
-    res.render("suggestion");
-});
 
 
 
@@ -1610,7 +1652,7 @@ app.post("/verifyemail", async (req, res) => {
             return res.status(400).json({ error: "User not found." });
         }
 
-        if (!otpStorage[email] || otpStorage[email] !== otp) {
+        if (!otpStorage[email] || otpStorage[email] != otp) {
             return res.status(400).json({ error: "Incorrect OTP." });
         }
 
@@ -1621,7 +1663,7 @@ app.post("/verifyemail", async (req, res) => {
         // Remove OTP from storage after successful verification
         delete otpStorage[email];
 
-        return res.render("/login");
+        return res.redirect("/login");
 
     } catch (err) {
         console.error("Email Verification Error:", err);
@@ -1656,11 +1698,11 @@ app.post("/login", async function(req, res) {
 
 
         // Unable Once Your Accoundt Have been Revoked
-        // if(user.email_verified == false){
-        //     req.session.email = user.email;
-        //     console.log("Email not verified");
-        //     return res.redirect("/verifyemail");
-        //     };
+        if(user.email_verified == false){
+            req.session.email = user.email;
+            console.log("Email not verified");
+            return res.redirect("/verifyemail");
+            };
         const totpSecret = speakeasy.generateSecret({ length: 20 });
         if(!user.totp_secret){        
             const otpauth_url = totpSecret.otpauth_url;
@@ -1946,13 +1988,49 @@ app.post("/upload/audio", upload.single("audio"), async (req, res) => {
 
 
 
+// async function saveMediaDetails(req, file, fileType) {
+//     console.log("Saving media details to database...");
+//     console.log(req.session.user);
+
+//     try {
+//         let user_id = req.session.user.user_id;
+
+//         const media = new Media({
+//             media_id: Date.now(),
+//             uploaded_user_id: user_id,
+//             file_size: file.size,
+//             file_type: fileType,
+//             file_url: `/uploads/${fileType.toLowerCase()}s/${file.filename}`,
+//             is_encrypted: false,
+//             created_at: new Date(),
+//             status: "Active"
+//         });
+
+//         await media.save();
+//         console.log("Media saved to database:", media);
+//     } catch (error) {
+//         console.error(" Error saving media:", error);
+//     }
+// }
+
+
 async function saveMediaDetails(req, file, fileType) {
     console.log("Saving media details to database...");
     console.log(req.session.user);
 
     try {
+        const MAX_UPLOADS = 10; // Maximum number of uploads allowed per user
         let user_id = req.session.user.user_id;
 
+        // **Check how many media files the user has already uploaded**
+        const userUploadCount = await Media.countDocuments({ uploaded_user_id: user_id });
+
+        if (userUploadCount >= MAX_UPLOADS) {
+            console.error("Error: Upload limit reached.");
+            return { error: "You cannot upload more than 10 media files." };
+        }
+
+        // Create a new media entry
         const media = new Media({
             media_id: Date.now(),
             uploaded_user_id: user_id,
@@ -1966,13 +2044,13 @@ async function saveMediaDetails(req, file, fileType) {
 
         await media.save();
         console.log("Media saved to database:", media);
+        return { message: "Media successfully saved!", media };
+
     } catch (error) {
-        console.error(" Error saving media:", error);
+        console.error("Error saving media:", error);
+        return { error: "Error saving media." };
     }
 }
-
-
-
 
 
 
@@ -2016,7 +2094,7 @@ function formVailidation(req,res,next){
 
     else{
         console.log("Form Vailidation failed")
-        res.render("register");
+        return res.send("Form Vailidation failed! Follow the rules and try again.");
     }
 }
 
@@ -2131,16 +2209,110 @@ function sendAlert(email, ip, geo) {
 
 
 
+// async function saveMediaDetails(req, file, fileType) {
+//     console.log("Saving media details to database...");
+//     console.log(req.session.user);
+
+//     try {
+//         let user_id = req.session.user.user_id;
+
+//         // Check if user_id is a Buffer
+//         if (Buffer.isBuffer(user_id)) {
+//             // Convert Buffer to hex string and format it as a UUID
+//             user_id = [
+//                 user_id.toString("hex").slice(0, 8),
+//                 user_id.toString("hex").slice(8, 12),
+//                 user_id.toString("hex").slice(12, 16),
+//                 user_id.toString("hex").slice(16, 20),
+//                 user_id.toString("hex").slice(20)
+//             ].join("-");
+//         }
+
+//         // Validate if the final string is a UUID
+//         if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(user_id)) {
+//             throw new Error("Invalid UUID format after conversion.");
+//         }
+
+//         const media = new Media({
+//             media_id: Date.now(), // Unique ID based on timestamp
+//             uploaded_user_id: user_id, // Correctly formatted UUID
+//             file_size: file.size,
+//             file_type: fileType,
+//             file_url: `/uploads/${fileType.toLowerCase()}s/${file.filename}`,
+//             is_encrypted: false,
+//             created_at: new Date(),
+//             status: "Active"
+//         });
+
+//         await media.save();
+//         console.log(" Media saved to database:", media);
+//     } catch (error) {
+//         console.error(" Error saving media:", error);
+//     }
+// }
+// async function saveMediaDetails(req, file, fileType) {
+//     console.log("Saving media details to database...");
+//     console.log(req.session.user);
+
+//     try {
+//         const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB limit
+//         let user_id = req.session.user.user_id;
+
+//         // Check if user_id is a Buffer and convert it to UUID format
+//         if (Buffer.isBuffer(user_id)) {
+//             user_id = [
+//                 user_id.toString("hex").slice(0, 8),
+//                 user_id.toString("hex").slice(8, 12),
+//                 user_id.toString("hex").slice(12, 16),
+//                 user_id.toString("hex").slice(16, 20),
+//                 user_id.toString("hex").slice(20)
+//             ].join("-");
+//         }
+
+//         // Validate UUID format
+//         if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(user_id)) {
+//             throw new Error("Invalid UUID format after conversion.");
+//         }
+
+//         // **Check file size before saving**
+//         if (file.size > MAX_FILE_SIZE) {
+//             console.error("Error: File size exceeds limit.");
+//             return { error: "File size exceeds the 5MB limit." };
+//         }
+
+//         // Save media details
+//         const media = new Media({
+//             media_id: Date.now(), // Unique ID based on timestamp
+//             uploaded_user_id: user_id, // Correctly formatted UUID
+//             file_size: file.size,
+//             file_type: fileType,
+//             file_url: `/uploads/${fileType.toLowerCase()}s/${file.filename}`,
+//             is_encrypted: false,
+//             created_at: new Date(),
+//             status: "Active"
+//         });
+
+//         await media.save();
+//         console.log("Media saved to database:", media);
+//         return { message: "Media successfully saved!", media };
+
+//     } catch (error) {
+//         console.error("Error saving media:", error);
+//         return { error: "Error saving media." };
+//     }
+// }
+
 async function saveMediaDetails(req, file, fileType) {
     console.log("Saving media details to database...");
     console.log(req.session.user);
 
     try {
+        const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB limit
+        const MAX_POSTS_PER_USER = 10; // Limit to 10 posts per user
         let user_id = req.session.user.user_id;
 
-        // Check if user_id is a Buffer
+        // Convert Buffer to UUID format if needed
         if (Buffer.isBuffer(user_id)) {
-            // Convert Buffer to hex string and format it as a UUID
             user_id = [
                 user_id.toString("hex").slice(0, 8),
                 user_id.toString("hex").slice(8, 12),
@@ -2150,11 +2322,26 @@ async function saveMediaDetails(req, file, fileType) {
             ].join("-");
         }
 
-        // Validate if the final string is a UUID
+        // Validate UUID format
         if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(user_id)) {
             throw new Error("Invalid UUID format after conversion.");
         }
 
+        // **Check if user has already posted 10 media files**
+        const userPostCount = await Media.countDocuments({ uploaded_user_id: user_id });
+
+        if (userPostCount >= MAX_POSTS_PER_USER) {
+            console.error("Error: User has reached the media post limit.");
+            return { error: "You cannot upload more than 10 media files." };
+        }
+
+        // **Check file size before saving**
+        if (file.size > MAX_FILE_SIZE) {
+            console.error("Error: File size exceeds limit.");
+            return { error: "File size exceeds the 5MB limit." };
+        }
+
+        // Save media details
         const media = new Media({
             media_id: Date.now(), // Unique ID based on timestamp
             uploaded_user_id: user_id, // Correctly formatted UUID
@@ -2167,9 +2354,12 @@ async function saveMediaDetails(req, file, fileType) {
         });
 
         await media.save();
-        console.log(" Media saved to database:", media);
+        console.log("Media saved to database:", media);
+        return { message: "Media successfully saved!", media };
+
     } catch (error) {
-        console.error(" Error saving media:", error);
+        console.error("Error saving media:", error);
+        return { error: "Error saving media." };
     }
 }
 
@@ -2222,35 +2412,73 @@ app.listen(PORT, () => {
 //     }
 // }
 
+// async function sheed(req, res) {
+//     try {
+//         if (!req.file) {
+//             return res.status(400).send("Image file is required.");
+//         }
+//         const user = await Users.findOne({ user_id: req.session.user.user_id });
+//         req.session.user = user;
+
+//         if (!user.advance_verified) {
+//             return  res.status(403).send(" You are not verified to sell items.");
+//         }
+
+       
+
+
+//         const items = {
+//             name: req.body.name,
+//             image: `/uploads/images/${req.file.filename}`, // Save image path
+//             Quantity: 100,
+//             price: req.body.price
+//         };
+
+//         console.log(items, "from sheed");
+
+//         await Items.create(items);
+//         res.send({ message: "Item successfully saved!", item: items });
+//     } catch (err) {
+//         console.error("Error saving item:", err);
+//         res.status(500).send("Error saving item.");
+//     }
+// }
+
 async function sheed(req, res) {
     try {
         if (!req.file) {
             return res.status(400).send("Image file is required.");
         }
+
+        // Fetch the user from session
         const user = await Users.findOne({ user_id: req.session.user.user_id });
         req.session.user = user;
 
         if (!user.advance_verified) {
-            return  res.status(403).send(" You are not verified to sell items.");
+            return res.status(403).send("You are not verified to sell items.");
         }
 
-       
+        // Check how many items the user is already selling
+        const userListingsCount = await Items.countDocuments({ seller_id: user.user_id });
 
+        if (userListingsCount >= 10) {
+            return res.status(403).send("You cannot sell more than 10 items.");
+        }
 
-        const items = {
-            name: req.body.name,
-            image: `/uploads/images/${req.file.filename}`, // Save image path
-            Quantity: 100,
-            price: req.body.price
-        };
+        // Create a new item listing
+        const newItem = new Items({
+            seller_id: user.user_id,
+            item_name: req.body.name,
+            item_description: req.body.description || "",
+            price: req.body.price,
+            image_url: `/uploads/images/${req.file.filename}`, // Save image path
+        });
 
-        console.log(items, "from sheed");
+        await newItem.save();
+        res.send({ message: "Item successfully listed for sale!", item: newItem });
 
-        await Items.create(items);
-        res.send({ message: "Item successfully saved!", item: items });
     } catch (err) {
         console.error("Error saving item:", err);
         res.status(500).send("Error saving item.");
     }
 }
-
