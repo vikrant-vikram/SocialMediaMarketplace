@@ -1,41 +1,102 @@
 <%- include('parcials/before_import') %>
+
 <link rel="stylesheet" href="/css/profile.css">
+<!-- CropperJS -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+
 <!-- locomotive-scroll -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/locomotive-scroll@3.2.5/dist/locomotive-scroll.min.css"/>
 <script src="https://cdn.jsdelivr.net/npm/locomotive-scroll@3.2.5/dist/locomotive-scroll.min.js"></script>
-<%- include('parcials/after_import') %>
 
+<%- include('parcials/after_import') %>
 <%- include('parcials/nav') %>
 
-    <div class="container">
-        <div class="edit-profile-form">
-            <h2>Edit Profile</h2>
+<div class="container">
+    <div class="edit-profile-form">
+        <h2>Edit Profile</h2>
 
-            <form action="/profile/update" method="POST" enctype="multipart/form-data">
-                <div class="profile-picture">
-                    <!-- Fallback for profile picture -->
-                    <img id="profilePreview" src="<%= user.profile_picture_url || '/images/default-profile.jpg' %>" alt="Profile Picture">
-                    <input type="file" name="profile_picture" accept="image/*" id="profileInput">
-                </div>
+        <form action="/profile/update" method="POST" enctype="multipart/form-data">
+            <div class="profile-picture" style="text-align: center;">
+                <img id="profilePreview" src="<%= user.profile_picture_url || '/images/default-profile.jpg' %>" alt="Profile Picture">
+                <br><br>
+                <input type="file" name="profile_picture" accept="image/*" id="profileInput" style="margin-top: 10px;">
+            </div>
 
-                <input type="text" name="username" value="<%= user.username %>" required placeholder="Username">
-                <input type="text" name="name" value="<%= user.name %>" required placeholder="Full Name">
-                <input type="text" name="mobile_number" value="<%= user.mobile_number %>" required placeholder="Contact Number">
-                <input type="email" name="email" value="<%= user.email %>" required placeholder="Email">
-                <textarea name="bio" placeholder="Bio"><%= user.bio %></textarea>
+            <input type="text" name="username" value="<%= user.username %>" required placeholder="Username">
+            <input type="text" name="name" value="<%= user.name %>" required placeholder="Full Name">
+            <input type="text" name="mobile_number" value="<%= user.mobile_number %>" required placeholder="Contact Number">
+            <input type="email" name="email" value="<%= user.email %>" required placeholder="Email">
+            <textarea name="bio" placeholder="Bio"><%= user.bio %></textarea>
 
-                <button type="submit">Save Changes</button>
-            </form>
-        </div>
+            <button type="submit">Save Changes</button>
+        </form>
     </div>
+</div>
 
-    <script>
-        document.getElementById("profileInput").addEventListener("change", function(event) {
-            const file = event.target.files[0];
-            if (file) {
-                document.getElementById("profilePreview").src = URL.createObjectURL(file);
+<!-- Cropper Modal -->
+<div id="cropperModal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.7); justify-content: center; align-items: center; z-index: 9999;">
+  <div style="background: white; padding: 20px; border-radius: 8px;">
+    <h3>Crop Your Image</h3>
+    <img id="cropperImage" style="max-width: 100%; max-height: 400px;">
+    <br>
+    <button id="cropBtn">Crop & Set</button>
+    <button onclick="document.getElementById('cropperModal').style.display='none'">Cancel</button>
+  </div>
+</div>
+
+<script>
+let cropper;
+const profileInput = document.getElementById('profileInput');
+const profilePreview = document.getElementById('profilePreview');
+const cropperModal = document.getElementById('cropperModal');
+const cropperImage = document.getElementById('cropperImage');
+const cropBtn = document.getElementById('cropBtn');
+
+profileInput.addEventListener('change', function(event) {
+    const file = event.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            cropperImage.src = e.target.result;
+            cropperModal.style.display = 'flex';
+
+            cropperImage.onload = () => {
+                if (cropper) cropper.destroy();
+                cropper = new Cropper(cropperImage, {
+                    aspectRatio: 1,
+                    viewMode: 1,
+                    dragMode: 'move',
+                    autoCropArea: 1,
+                    responsive: true,
+                });
             }
-        });
-    </script>
-<%- include('parcials/footer') %>
+        };
+        reader.readAsDataURL(file);
+    }
+});
 
+cropBtn.addEventListener('click', function() {
+    if (cropper) {
+        const canvas = cropper.getCroppedCanvas({
+            width: 300,
+            height: 300,
+        });
+
+        profilePreview.src = canvas.toDataURL();
+
+        canvas.toBlob(function(blob) {
+            const file = new File([blob], "cropped_profile.jpg", { type: "image/jpeg" });
+
+            const dataTransfer = new DataTransfer();
+            dataTransfer.items.add(file);
+            profileInput.files = dataTransfer.files;
+        });
+
+        cropperModal.style.display = 'none';
+        cropper.destroy();
+    }
+});
+</script>
+
+<%- include('parcials/footer') %>

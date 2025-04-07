@@ -324,6 +324,7 @@ app.get("/profile",isLoggedIn,async function (req, res) {
     try {
         // Get user from session
         const user = req.session.user;
+        delete req.session.totp_verified;
         console.log(user);
         // Fetch the media files associated with the user
         const mediaList = await Media.find({ uploaded_user_id: user.user_id });
@@ -355,7 +356,7 @@ app.get("/upload",isLoggedIn,function (req, res) {
 });
 
 
-app.get("/editprofile",isLoggedIn,function (req, res) {
+app.get("/editprofile",isLoggedIn,totpMiddleware,function (req, res) {
     req.session.extraAuth = false;
     res.render("editProfile",{ user: req.session.user});
 
@@ -809,12 +810,34 @@ app.get("/suggestion",isLoggedIn, function (req, res) {
 
 
 
-app.get("/sheed-item", isLoggedIn, function (req, res) {
+// app.get("/sheed-item", isLoggedIn,totpMiddleware, function (req, res) {
+//     if(req.session.user.advance_verified){ 
+//         return res.render("sheed-item");
+//     }
 
-   res.render("sheed-item");
+//    res.send("U r Not verified to sell items");
+// });
+
+
+app.get("/sheed-item", isLoggedIn, totpMiddleware,async (req, res) => {
+    try {
+
+        const user = await Users.findOne({ user_id: req.session.user.user_id });
+        req.session.user = user;
+
+        if (user.advance_verified) {
+            return res.render("sheed-item");
+        }
+
+        res.status(403).send(" You are not verified to sell items.");
+    } catch (err) {
+        console.error("Error checking advance verification:", err);
+        res.status(500).send("Internal Server Error");
+    }
 });
 
-app.post("/sheed-item", isLoggedIn, upload.single("image"), sheed);
+
+app.post("/sheed-item", isLoggedIn,resetMiddleware, upload.single("image"), sheed);
 
 
 
@@ -1244,9 +1267,20 @@ app.get('/admin/attacker-logs', isAdmin, (req, res) => {
     }
 });
 
+app.get('/admin/attacklogs', isAdmin, (req, res) => {
+    try {
+        // Read logs from the file
+        const logs = fs.readFileSync(path.join(__dirname, 'attackers.log'), 'utf-8');
+        res.json({ success: true, logs });
+    } catch (error) {
+        logger.error('Error reading logs:', error); // Log the error
+        res.status(500).json({ success: false, message: 'Failed to fetch logs' });
+    }
+});
+
 
 app.get("/admin", isAdmin, function (req, res) {
-    res.render("admin");
+    res.redirect("verifyusers");
 });
 
 
@@ -1382,7 +1416,7 @@ app.post("/register", upload.single("profile_picture"), formVailidation, async f
             password_hash: passwordHash,
             bio: req.body.bio,
             profile_picture_url: req.file ? `/uploads/profile_pictures/${req.file.filename}` : null,
-            totp_secret: totpSecret.base32, // Store the base32 secret
+            totp_secret: totpSecret.base32,
             is_verified: false,
         };
 
@@ -1627,6 +1661,7 @@ app.post("/login", async function(req, res) {
         //     console.log("Email not verified");
         //     return res.redirect("/verifyemail");
         //     };
+        const totpSecret = speakeasy.generateSecret({ length: 20 });
         if(!user.totp_secret){        
             const otpauth_url = totpSecret.otpauth_url;
             QRCode.toDataURL(otpauth_url, function (err, qrCodeDataURL) {
@@ -1716,10 +1751,13 @@ app.post("/login", async function(req, res) {
             console.log("Incorrect password");
             return res.render("login");
         }
-
         console.log("User authenticated");
         req.session.user = user;
-        res.redirect("/profile");
+        totpMiddleware(req, res, function () {
+           
+            delete req.session.totp_verified; // Clear session variable
+            res.redirect("/profile");
+        });
 
     } catch (err) {
         console.error("Login Error:", err);
@@ -1733,16 +1771,15 @@ app.post("/login", async function(req, res) {
 
 
 // POST Update Profile
-app.post("/profile/update", isLoggedIn,totpMiddleware, resetMiddleware,upload.single("profile_picture"), async (req, res) => {
+app.post("/profile/update", isLoggedIn,resetMiddleware,upload.single("profile_picture"), async (req, res) => {
     try {
         const userId = req.session.user.user_id; // Get UUID from session
 
         // Prepare updated user data
+        req.boady = req.session.pendingFormData;
         const updatedData = {
             username: req.body.username,
             name: req.body.name,
-            email: req.body.email,
-            mobile_number: req.body.mobile_number,
             bio: req.body.bio,
             updated_at: Date.now(),
         };
@@ -1972,7 +2009,7 @@ function formVailidation(req,res,next){
     password = req.body.password
  
 
-    if(nameValidation(username)&& emailValidation(email)  && passwordVailidation(password)  && contactVailidation(mobile_number) && nameValidation(name)){
+    if( emailValidation(email)  && passwordVailidation(password)  && contactVailidation(mobile_number) && nameValidation(name)){
         
         return next();
     }
@@ -1987,6 +2024,7 @@ function formVailidation(req,res,next){
 
 
 function nameValidation(name){
+    console.log("Name:", name);
     const nameRegex = /^[a-zA-Z]+(([',. -][a-zA-Z ])?[a-zA-Z]*)*$/;
     if(nameRegex.test(name))
     {
@@ -2189,6 +2227,15 @@ async function sheed(req, res) {
         if (!req.file) {
             return res.status(400).send("Image file is required.");
         }
+        const user = await Users.findOne({ user_id: req.session.user.user_id });
+        req.session.user = user;
+
+        if (!user.advance_verified) {
+            return  res.status(403).send(" You are not verified to sell items.");
+        }
+
+       
+
 
         const items = {
             name: req.body.name,

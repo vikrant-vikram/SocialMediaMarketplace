@@ -12,6 +12,8 @@
 <%- include('parcials/nav') %>
 <!-- navbar -->
 
+
+  
 	<div class='search_con'>
 		<form action="/search" method="get" class="input_con">
 			<input type="text" placeholder='Search for Query...' spellCheck="false" id="queryFind"/>
@@ -22,6 +24,21 @@
 			</a>
 		</form>
 	</div>
+
+	<div class="story-bar">
+		<% users.forEach(user => { %>
+		  <div class="story">
+			<a href="/story/<%= user.username %>">
+			  <div class="story-image">
+				<img src="<%= user.profile_picture_url ? user.profile_picture_url : '/images/default-avatar.png' %>" alt="story" />
+			  </div>
+			</a>
+			<div class="story-username"><%= user.username %></div>
+		  </div>
+		<% }) %>
+	  </div>
+	  
+
 
 	<div class="divider"></div>
 
@@ -66,4 +83,3 @@
 	// </script>
     // <script src="/script/scroll.js"></script>
 <%- include('parcials/footer') %>
-
