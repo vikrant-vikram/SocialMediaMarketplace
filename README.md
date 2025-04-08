@@ -8,20 +8,20 @@ Here’s your README.md file formatted properly for GitHub:
 🚀 Node.js Express Startup Guide
 
 A secure and scalable Node.js backend using Express, MongoDB, and additional middleware for authentication, logging, and file uploads.
-
 📌 Features
 
+```
 ✅ User authentication (Session-based)
 ✅ Secure file uploads (Multer)
 ✅ Logging with Winston
 ✅ CSRF Protection
 ✅ Admin role management
 ✅ WebSocket support with Socket.io
-
+```
 ⸻
 
 📂 Folder Structure
-
+```
 /your-project
 │── /models                # Database models (Mongoose)
 │── /public                # Public assets (CSS, JS, images)
@@ -31,38 +31,38 @@ A secure and scalable Node.js backend using Express, MongoDB, and additional mid
 │── .env                   # Environment variables
 │── package.json           # Project dependencies
 │── README.md              # Documentation
-│── logs.txt               # Log file (Winston)
-
+│── logs.txt               # Log file (Winston)`
+```
 
 
 ⸻
 
 🛠 Prerequisites
-
+```
 Before starting the server, ensure you have the following installed:
 	•	Node.js (v16 or later recommended)
 	•	MongoDB (Local or MongoDB Atlas)
 	•	npm (Comes with Node.js)
 	•	A .env file with required environment variables
-
+```
 ⸻
 
 📥 Installation
 
 1️⃣ Clone the Repository
-
+```
 git clone https://github.com/your-repo.git
 cd your-project
-
+```
 2️⃣ Install Dependencies
-
+```
 npm install
-
+```
 3️⃣ Configure Environment Variables
 
 Create a .env file in the root directory and add:
-
-PORT=3000
+```
+POR`=3000
 MONGOOSE_DBSERVER=mongodb://localhost:27017/your-db-name
 SECRET=your-secret-key
 STRIPE_PRIVATE_KEY=your-stripe-secret
@@ -73,7 +73,7 @@ SMTP_PORT=587
 SMTP_USER=your-smtp-user
 SMTP_PASSWORD=your-smtp-password
 NODE_ENV=development
-
+```
 🔹 Note: Replace values with actual credentials.
 
 ⸻
@@ -81,34 +81,19 @@ NODE_ENV=development
 🚀 Running the Server
 
 Development Mode (Auto-restart)
-
+```
 npm run dev
-
-Production Mode
-
-npm start
+```
 
 
 
-⸻
-
- API Endpoints
-
-Method	Endpoint	Description
-GET	/	Home Route
-POST	/login	User Login
-POST	/register	User Registration
-GET	/logout	User Logout
-GET	/profile	Get User Profile
 
 
-
-⸻
 
  Troubleshooting
+
 	•	MongoDB connection issues?
 Ensure MongoDB service is running:
-
 mongod
 
 
