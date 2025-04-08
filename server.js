@@ -276,7 +276,6 @@ console.debug = (...args) => {
 
 // Middleware to check if the user is an admin
 function isAdmin(req, res, next) {
-    req.session.isAdmin = true; // Set isAdmin to true for testing
     const admin = req.session.isAdmin;
 
     if (admin) {
@@ -376,6 +375,10 @@ app.get("/logout",isLoggedIn,function (req, res) {
     req.session.destroy();
     res.render("login");
 
+});
+
+app.get('/contact', (req, res) => {
+    res.render('contact');
 });
 
 
@@ -723,10 +726,32 @@ app.post('/accept-friend', isLoggedIn,totpMiddleware, resetMiddleware,async (req
 //     res.status(500).json({ success: false, message: 'Server Error' });
 //   }
 // });
+// Admin dashboard - render EJS template
+app.get('/admin/login', async (req, res) => {
+    res.render('admin-login');
+  });
+  
 
 
+  app.post('/admin/login', async (req, res) => {
+    const { username, password } = req.body;
 
+  
+    if (username === process.env.ADMIN_USERNAME && password === process.env.ADMIN_PASSWORD) {
+      req.session.isAdmin = true;
+      res.redirect("/verifyusers")
+    } else {
+      req.flash('error', 'Invalid credentials');
+      return res.redirect('/admin/login');
+    }
+  });
 
+// Logout Route
+app.get('/admin/logout', (req, res) => {
+    req.session.destroy(() => {
+      res.redirect('/login');
+    });
+  });
 
 // Admin dashboard - render EJS template
 app.get('/verifyusers', isAdmin, async (req, res) => {
@@ -1061,6 +1086,116 @@ app.post("/order", isLoggedIn,async (req, res) => {
     }
 });
 
+
+
+// ==========  **POST: Place Order with Stripe Checkout** check this once
+
+
+// app.post("/order", isLoggedIn, async (req, res) => {
+//     try {
+//         // Fetch cart items
+//         const cart = await Cart.find({ username: req.session.user.username }); 
+//         if (!cart.length) return res.render("error"); // Ensure cart is not empty
+
+//         let totalAmount = 0;
+
+//         // Fetch all item details in parallel
+//         const itemNames = cart.map(cartItem => cartItem.itemname);
+//         const items = await Items.find({ name: { $in: itemNames } });
+
+//         if (items.length !== cart.length) return res.render("error"); // Prevent order if any item is missing
+
+//         // Prepare order items
+//         const orderItems = cart.map(cartItem => {
+//             const item = items.find(i => i.name === cartItem.itemname);
+//             const price = item.price * cartItem.quantity;
+//             totalAmount += price;
+//             return {
+//                 username: req.session.user.username,
+//                 typ: req.session.user.type,
+//                 name: req.body.name,
+//                 itemname: cartItem.itemname,
+//                 deliverydate: req.body.date,
+//                 zip: req.body.zip,
+//                 contact: req.body.contact,
+//                 address1: req.body.address1,
+//                 quantity: cartItem.quantity,
+//                 price
+//             };
+//         });
+
+//         console.log("Order Items:", orderItems);
+
+//         // Create Stripe Checkout Session
+//         const session = await stripe.checkout.sessions.create({
+//             payment_method_types: ["card"],
+//             mode: "payment",
+//             line_items: [{
+//                 price_data: {
+//                     currency: 'inr',
+//                     product_data: { name: "Order" },
+//                     unit_amount: totalAmount * 100, // Convert Rupees to Paise
+//                 },
+//                 quantity: 1,
+//             }],
+//             success_url: `${process.env.SERVER_URL}/order-success?session_id={CHECKOUT_SESSION_ID}`, // Redirect here after success
+//             cancel_url: `${process.env.SERVER_URL}/error`,
+//         });
+
+//         res.redirect(session.url);
+//         console.log("Stripe Session:", session);
+
+//         // Do not store orders in DB yet! Store them only after successful payment.
+//     } catch (err) {
+//         console.error("Order Error:", err);
+//         res.render("error");
+//     }
+// });
+
+// //  Store Order After Payment is Successful
+// app.get("/order-success", isLoggedIn, async (req, res) => {
+//     try {
+//         const session = await stripe.checkout.sessions.retrieve(req.query.session_id);
+
+//         if (!session || session.payment_status !== "paid") {
+//             return res.render("error"); // Prevent incomplete orders
+//         }
+
+//         const username = req.session.user.username;
+//         const cart = await Cart.find({ username });
+
+//         const orderItems = cart.map(cartItem => ({
+//             username,
+//             typ: req.session.user.type,
+//             name: req.session.user.name,
+//             itemname: cartItem.itemname,
+//             deliverydate: new Date().toISOString(),
+//             zip: "000000",
+//             contact: "N/A",
+//             address1: "N/A",
+//             quantity: cartItem.quantity,
+//             price: cartItem.quantity * 100, // Store actual price
+//         }));
+
+//         // Store orders in DB
+//         await Orders.insertMany(orderItems);
+
+//         // Clear cart after successful payment
+//         await Cart.deleteMany({ username });
+
+//         res.render("history", { order: orderItems });
+//     } catch (error) {
+//         console.error("Order Success Error:", error);
+//         res.render("error");
+//     }
+// });
+
+
+
+
+
+
+
 //  **GET: Order History**
 app.get("/history", isLoggedIn, async (req, res) => {
     try {
@@ -1141,7 +1276,7 @@ app.post("/send-otp", (req, res) => {
             <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
             <p style="text-align: center; font-size: 14px; color: #777;">
                 🔒 Stay Secure, Stay Safe.<br>
-                <strong>Your Company Name</strong><br>
+                <strong>Social Media Marketplace – Cybersecurity Division</strong><br>
                 📩 Contact us: <a href="mailto:randomcollegemail@iiitd.ac.in" style="color: #3498DB;"randomcollegemail@iiiitd.ac.in</a>
             </p>
         </div>`
@@ -1353,7 +1488,7 @@ app.get("/verifyemail", async function(req, res) {
             <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
             <p style="text-align: center; font-size: 14px; color: #777;">
                 🔒 Stay Secure, Stay Safe.<br>
-                <strong>YHame Complny Name Pta Nahi hai</strong><br>
+               <strong>Social Media Marketplace – Cybersecurity Division</strong><br>
                 📩 Contact us: <a href="mailto:randomcollegemail@iiitd.ac.in" style="color: #3498DB;">randomcollegemail@iiiitd.ac.in</a>
             </p>
         </div>`

@@ -1,0 +1,113 @@
+<%- include('parcials/before_import') %>
+<link rel="stylesheet" href="/css/search.css" />
+
+<!-- Locomotive Scroll -->
+<link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/locomotive-scroll@3.2.5/dist/locomotive-scroll.min.css"
+/>
+<script src="https://cdn.jsdelivr.net/npm/locomotive-scroll@3.2.5/dist/locomotive-scroll.min.js"></script>
+
+<!-- Custom Styles -->
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
+
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    body {
+        font-family: 'Poppins', sans-serif;
+        background: linear-gradient(to right, #1e3c72, #2a5298);
+        height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .contact-container {
+        background: rgba(255, 255, 255, 0.1);
+        padding: 30px;
+        border-radius: 12px;
+        box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.3);
+        text-align: center;
+        backdrop-filter: blur(12px);
+        width: 450px;
+        color: white;
+        animation: fadeIn 1.2s ease-in-out;
+    }
+
+    h2 {
+        font-size: 26px;
+        font-weight: 600;
+        margin-bottom: 15px;
+        border-bottom: 3px solid rgba(255, 255, 255, 0.3);
+        display: inline-block;
+        padding-bottom: 8px;
+    }
+
+    .contact-item {
+        font-size: 18px;
+        margin: 12px 0;
+        padding: 12px;
+        background: rgba(255, 255, 255, 0.15);
+        border-radius: 8px;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        cursor: pointer;
+        font-weight: 500;
+    }
+
+    .contact-item:hover {
+        transform: scale(1.05);
+        box-shadow: 0px 0px 10px rgba(255, 255, 255, 0.3);
+        background: rgba(255, 255, 255, 0.25);
+    }
+
+    .social-icons {
+        margin-top: 20px;
+    }
+
+    .social-icons a {
+        color: white;
+        font-size: 24px;
+        margin: 0 12px;
+        transition: transform 0.3s ease, color 0.3s ease;
+    }
+
+    .social-icons a:hover {
+        transform: scale(1.2);
+        color: #00c6ff;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(-15px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+</style>
+
+<%- include('parcials/after_import') %>
+<%- include('parcials/nav') %>
+
+<div class="contact-container">
+    <h2>Contact Us</h2>
+    
+    <div class="contact-item"> Suhail Saifi [MT24097]</div>
+    <div class="contact-item"> Samyuktha Chilaka [MT24134]</div>
+    <div class="contact-item"> Tabassum Fatima [MT24143]</div>
+    <div class="contact-item"> Bikrant Bikram [MT24116]</div>
+
+
+</div>
+
+<%- include('parcials/footer') %>
+
+<!-- FontAwesome Icons (for social media) -->
+<script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!-- <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -122,6 +122,217 @@
             <button type="submit" class="submit-btn">Verify 🔒</button>
         </form>
     </div>
+
+</body>
+</html> -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔐 TOTP Authentication</title>
+    <style>
+        /* General Reset */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Arial', sans-serif;
+        }
+
+        /* Full Page Styling */
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            color: white;
+            position: relative;
+        }
+
+        /* Centered Container */
+        .auth-container {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 2rem;
+            border-radius: 12px;
+            text-align: center;
+            width: 350px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+            animation: fadeIn 1s ease-in-out;
+        }
+
+        /* Heading */
+        .auth-container h2 {
+            margin-bottom: 15px;
+            font-size: 22px;
+            font-weight: bold;
+        }
+
+        /* Input Fields */
+        .input-group {
+            margin-bottom: 15px;
+            text-align: left;
+        }
+
+        .input-group label {
+            font-size: 14px;
+            font-weight: bold;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 10px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            outline: none;
+            transition: 0.3s ease;
+        }
+
+        .input-group input:focus {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        /* Submit Button */
+        .submit-btn {
+            width: 100%;
+            padding: 12px;
+            font-size: 16px;
+            font-weight: bold;
+            background: #00c6ff;
+            border: none;
+            border-radius: 8px;
+            color: white;
+            cursor: pointer;
+            transition: 0.3s ease;
+        }
+
+        .submit-btn:hover {
+            background: #0072ff;
+        }
+
+        /* Animation */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Virtual Keyboard */
+        .virtual-keyboard {
+            display: none;
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 10px;
+            backdrop-filter: blur(8px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            z-index: 999;
+        }
+
+        .virtual-keyboard div {
+            display: flex;
+            justify-content: center;
+        }
+
+        .virtual-keyboard button {
+            background: #ffffff33;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 12px;
+            margin: 5px;
+            width: 50px;
+            font-size: 18px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .virtual-keyboard button:hover {
+            background: #ffffff55;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="auth-container">
+        <h2>🔐 Two-Factor Authentication</h2>
+        <p>Please enter your TOTP code to proceed.</p>
+        
+        <form method="POST" action="/verify-totp">
+            <div class="input-group">
+                <label for="mobile_number">Mobile Number</label>
+                <input type="text" id="mobile_number" name="mobile_number" placeholder="Enter your mobile number" required>
+            </div>
+
+            <div class="input-group">
+                <label for="totp_token">TOTP Code</label>
+                <input type="text" id="totp_token" name="totp_token" placeholder="Enter your authentication code" required>
+            </div>
+
+            <button type="submit" class="submit-btn">Verify 🔒</button>
+        </form>
+    </div>
+
+    <div class="virtual-keyboard" id="keyboard">
+        <div>
+            <button onclick="insertDigit('1')">1</button>
+            <button onclick="insertDigit('2')">2</button>
+            <button onclick="insertDigit('3')">3</button>
+        </div>
+        <div>
+            <button onclick="insertDigit('4')">4</button>
+            <button onclick="insertDigit('5')">5</button>
+            <button onclick="insertDigit('6')">6</button>
+        </div>
+        <div>
+            <button onclick="insertDigit('7')">7</button>
+            <button onclick="insertDigit('8')">8</button>
+            <button onclick="insertDigit('9')">9</button>
+        </div>
+        <div>
+            <button onclick="deleteDigit()">⌫</button>
+            <button onclick="insertDigit('0')">0</button>
+        </div>
+    </div>
+
+    <script>
+        const otpInput = document.getElementById('totp_token');
+        const keyboard = document.getElementById('keyboard');
+
+        otpInput.addEventListener('focus', () => {
+            keyboard.style.display = 'block';
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!keyboard.contains(e.target) && e.target !== otpInput) {
+                keyboard.style.display = 'none';
+            }
+        });
+
+        function insertDigit(digit) {
+            otpInput.value += digit;
+        }
+
+        function deleteDigit() {
+            otpInput.value = otpInput.value.slice(0, -1);
+        }
+    </script>
 
 </body>
 </html>

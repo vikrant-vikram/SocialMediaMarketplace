@@ -325,3 +325,8 @@ a:hover {
     color: #666;
     text-align: center;
 }
+
+
+.bio-container {
+    z-index: 1000;
+}
