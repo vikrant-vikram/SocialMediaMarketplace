@@ -41,7 +41,7 @@ for(var i=0;i<items.length;i++){var item=items[i]; console.log("chloa");%>
     <img src="<%=item.image %> " class="card-img-top  img img-thumbnail" alt="..." style="height: 300px;">
     <div class="card-body">
       <p class="card-text text-uppercase text-primary text-center"><%=item.name %> </p>
-      <strong><p class="text-center text-body"><%=item.price %> rs/Kg</p></strong>
+      <strong><p class="text-center text-body"><%=item.price %> rs/unit</p></strong>
       
       <input id="<%=item.name+"q"%>"class="container" type="number" placeholder="kg" min="1" required="">
       <button id="<%=item.name%>" class="btn btn-outline-primary container" onclick="addToCart(this.id)">Add to cart</button>
@@ -62,7 +62,7 @@ if(i<items.length){
     <img src="<%=item.image %> " class="card-img-top  img img-thumbnail" alt="..." style="height: 300px;">
     <div class="card-body">
       <p class="card-text text-uppercase text-primary text-center"><%=item.name %> </p>
-      <strong><p class="text-center text-body"><%=item.price %> rs/Kg</p></strong>
+      <strong><p class="text-center text-body"><%=item.price %> rs/unit</p></strong>
       
       <input id="<%=item.name+"q"%>"class="container" type="number" placeholder="kg" min="1" required="">
       <button id="<%=item.name%>" class="btn btn-outline-primary container" onclick="addToCart(this.id)">Add to cart</button>
@@ -83,7 +83,7 @@ var item=items[i];
     <img src="<%=item.image %> " class="card-img-top img img-thumbnail" alt="..." style="height: 300px;">
     <div class="card-body">
       <p class="card-text text-uppercase text-primary text-center"><%=item.name %> </p>
-      <strong><p class="text-center text-body"><%=item.price %> rs/Kg</p></strong>
+      <strong><p class="text-center text-body"><%=item.price %> rs/unit</p></strong>
       
       <input id="<%=item.name+"q"%>"class="container" type="number" placeholder="kg" min="1" required="">
       <button id="<%=item.name%>" class="btn btn-outline-primary container" onclick="addToCart(this.id)">Add to cart</button>

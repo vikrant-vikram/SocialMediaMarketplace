@@ -15,42 +15,92 @@
 
 
 
-    <div class="margin-top-1">
-        <div class="box-form ">
-            <div class="left">
-                <div class="overlayy">
+<div class="margin-top-1">
+    <div class="box-form">
+        <div class="left">
+            <div class="overlayy">
                 <h1>Hello There.</h1>
-                <p>Welcome back, Lets do some business.</p>
+                <p>Welcome back, Let's do some business.</p>
                 <span>
                     <p>Our social media</p>
-                    <a href="https://www.instagram.com/reel/CcGJHGOgANo/?igsh=MWxhOXZiMGh4emU4Yg=="><i class="fa fa-facebook" aria-hidden="true"></i>instagram</a>
-                    <a href="https://www.instagram.com/reel/CcGJHGOgANo/?igsh=MWxhOXZiMGh4emU4Yg=="><i class="fa fa-twitter" aria-hidden="true"></i> Twitter</a>
+                    <a href="https://www.instagram.com/reel/CcGJHGOgANo/?igsh=MWxhOXZiMGh4emU4Yg==" target="_blank">
+                        <i class="fa fa-facebook" aria-hidden="true"></i> Instagram
+                    </a>
+                    <a href="https://www.instagram.com/reel/CcGJHGOgANo/?igsh=MWxhOXZiMGh4emU4Yg==" target="_blank">
+                        <i class="fa fa-twitter" aria-hidden="true"></i> Twitter
+                    </a>
                 </span>
+            </div>
+        </div>
+
+        <div class="right">
+            <p>Don't have an account? <a href="/register">Create Your Account</a>, it takes less than a minute</p>
+            <form id="loginForm" action="/login" method="post">
+                <div class="inputs">
+                    <input type="text" placeholder="Contact Number" id="contact" name="mobile_number" required maxlength="10" minlength="10">
+                    <small id="contactError" class="error-message"></small>
+
+                    <input type="password" placeholder="Password" id="password" name="password" required>
+                    <small id="passwordError" class="error-message"></small>
                 </div>
-            </div>
-            
-            
-                <div class="right">
-                <!-- <h5>Login</h5> -->
-                <p>Don't have an account? <a href="/register">Creat Your Account</a> it takes less than a minute</p>
-                <form action="/login" method="post">
-                    <div class="inputs">
-                        <input type="text" placeholder="Contact Number" id="contact" name="mobile_number" required>
-                        <input type="password" placeholder="Password" id="password" name = "password" required>
-                    </div>
-                        
-                        <br><br>
-                        
-                    <div class="remember-me--forget-password">
-                        <p>forget password?</p>
-                    </div>
-                    <br>
-                    <button type="submit">Login</button>
-                </form>
-            </div>
-            
+
+                <br><br>
+
+                <div class="remember-me--forget-password">
+                    <p>Forget password?</p>
+                </div>
+                <br>
+                <button type="submit">Login</button>
+            </form>
         </div>
     </div>
+</div>
+
+<script>
+    document.getElementById("loginForm").addEventListener("submit", function(event) {
+        let isValid = true;
+
+        // Get input values
+        const contact = document.getElementById("contact").value.trim();
+        const password = document.getElementById("password").value.trim();
+
+        // Error message elements
+        const contactError = document.getElementById("contactError");
+        const passwordError = document.getElementById("passwordError");
+
+        // Clear previous errors
+        contactError.textContent = "";
+        passwordError.textContent = "";
+
+        // Contact Number Validation
+        const contactRegex = /^[1-9][0-9]{9}$/;
+        if (!contactRegex.test(contact)) {
+            contactError.textContent = "Invalid mobile number. Must be exactly 10 digits and start with 1-9.";
+            isValid = false;
+        }
+
+        // Password Validation
+        const passwordRegex = /^(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{8,}$/;
+        if (!passwordRegex.test(password)) {
+            passwordError.textContent = "Password must be at least 8 characters long and include a number, uppercase, lowercase, and special character.";
+            isValid = false;
+        }
+
+        // Prevent form submission if invalid
+        if (!isValid) {
+            event.preventDefault();
+        }
+    });
+</script>
+
+<style>
+    .error-message {
+        color: red;
+        font-size: 12px;
+        margin-top: 2px;
+        display: block;
+    }
+</style>
 
 
 <%- include('parcials/footer') %>

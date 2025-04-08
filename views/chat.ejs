@@ -1,104 +1,44 @@
+<%- include('parcials/before_import') %>
+<link rel="stylesheet" href="/css/chat.css">
+<!-- External Libraries -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.10.4/gsap.min.js"></script>
+<script src="/js/script.js"></script>
 
+<%- include('parcials/after_import') %>
+<%- include('parcials/nav') %>
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.3/jquery.min.js"></script>
-  <title>terminal</title>
-  <link rel="stylesheet" href="/css/style-chat.css">
-</head>
-<body  >
+<!-- Chat Box Section -->
+<section class="chat-container">
+    <div class="chat-box">
+        <div class="chat-header">
+            <h2>Chat Room</h2>
+        </div>
 
-  <audio id="notifypop" controls hidden > 
-    <source src="path/sound.ogg" type="audio/ogg">
-    <source src="media/creepy-echo-scary-and-spooky-sounds-9685.mp3" type="audio/mpeg">
-  </audio>
+        <!-- Hidden Username -->
+        <input type="text" id="username" value="<%= user.username %>" hidden />
 
+        <!-- Recipient Selection -->
+        <div class="chat-users">
+            <label for="recipient">Select a Friend:</label>
+            <select id="recipient">
+                <option value="" disabled selected>Choose a contact</option>
+                <% friends.forEach(friend => { %>
+                    <option value="<%= friend.username %>"><%= friend.username %></option>
+                <% }); %>
+            </select>
+        </div>
 
-  <audio id="keyboardsound" controls hidden > 
-    <source src="path/sound.ogg" type="audio/ogg">
-    <source src="media/key-4.mp3" type="audio/mpeg">
-  </audio>
+        <!-- Messages Display -->
+        <div id="messages" class="chat-messages"></div>
 
-  <div class="overlay"></div>
-  <div class="scanline"></div>
-  
-  <div class="terminal wrapper">
-    <p class="page-intro red"></p>
-
-
-    <!-- Changed  -->
-    <div class="image-hero-removed"> 
-      <!-- <img src="https://cdn.pixabay.com/photo/2017/02/24/22/00/skull-2096533_1280.png" alt="">s -->
+        <!-- Message Input -->
+        <div class="chat-input-area">
+            <input type="text" id="message" placeholder="Type a message..." />
+            <button id="sendBtn">➤</button>
+        </div>
     </div>
+</section>
 
-
-
-    <p id="login-session"> Tue Jan 10 17:48:46 on ttys000</p>
-    <table>
-      <tr>
-        <td>Command</td>
-        
-        <td></td>  
-        <td></td>
-      </tr>
-      <tr>
-        <td></td>
-        <td>./profile</td> 
-        <td>: To print User Specific inforation</td>
-      </tr>
-      <tr>
-        <td></td>
-        <td>--help </td> 
-        <td>: To Get infroamtion regarding commands</td>
-      </tr>
-      <tr>
-        <td></td>
-        <td>./getintro </td> 
-        <td>: To Get the introduction </td>
-      </tr>
-      <tr>
-        <td></td>
-        <td>./contact</td> 
-        <td>: To print contact</td>
-      </tr>
-      <tr>
-        <td></td>
-        <td>./login</td> 
-        <td>: To login</td>
-      </tr>
-      <tr>
-        <td></td>
-        <td>./logout</td> 
-        <td>: To logout</td>
-      </tr>
-      <tr>
-        <td></td>
-        <td>./chat</td> 
-        <td>: To logout</td>
-      </tr>
-      <tr>
-        <td></td>
-        <td>./askai</td> 
-        <td>: To chat with AI</td>
-      </tr>
-
-    </table>
-    <div class="terminal-output"></div>
-    <div class="terminal-input">
-      <span class="prompt">user-random_number@PC1 ~ %</span>
-      <input type="text" id="terminal-input">
-    </div>
-  </div>
-
-
-
-
+<!-- Scripts -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.8.1/socket.io.js"></script>
 <script src="/js/chatScript.js"></script>
-
-  
-</body>
-</html>

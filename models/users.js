@@ -16,6 +16,11 @@ const userSchema = new mongoose.Schema({
     created_at: { type: Date, default: Date.now },
     updated_at: { type: Date, default: Date.now },
     totp_secret: { type: String }, // Store TOTP secret
+
+        // Cryptographic keys
+    public_key: { type: String }, // Public key (stored as plain text)
+    encrypted_private_key: { type: String }, // AES encrypted private key
+    encrypted_aes_key: { type: String }, // RSA encrypted AES key
 });
 
 module.exports = mongoose.model("User", userSchema);

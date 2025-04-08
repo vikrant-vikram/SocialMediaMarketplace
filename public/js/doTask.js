@@ -1,11 +1,13 @@
 function addToCart(data)
 {
+    console.log("add to cart");
+    console.log(data);
     var text=$("#"+data).html();
     if(text!="remove")
     {
         var q=$("#"+data+"q").val();
+        alert(q);
         if(q)
-        
             $.ajax({
                 type: "get",
                 url: "/addToCart/"+data+"/"+q,

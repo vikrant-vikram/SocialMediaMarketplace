@@ -6,77 +6,57 @@
     <title>500 - Internal Server Error</title>
     <style>
         body {
-            background-color: #282c34;
-            color: #fff;
-            font-family: "Courier New", Courier, monospace;
+            background-color: #f4f4f4;
+            color: #333;
+            font-family: 'Courier New', Courier, monospace;
             padding: 20px;
-        }
-        .error-container {
-            max-width: 800px;
-            margin: auto;
-            background: #1e1e1e;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
         }
         h1 {
-            color: #ff6b6b;
+            color: #d9534f;
         }
         pre {
-            background: #121212;
+            background-color: #f8f8f8;
+            border: 1px solid #ddd;
             padding: 10px;
             border-radius: 5px;
             overflow-x: auto;
-        }
-        .stack-trace {
-            color: #ffcc00;
+            font-size: 14px;
         }
         .details {
-            color: #79d5ff;
+            color: #5bc0de;
         }
     </style>
 </head>
 <body>
 
-    <div class="error-container">
-        <h1>500 - Internal Server Error</h1>
-        <p><strong>Error Message:</strong> UnhandledPromiseRejection: Cannot read properties of undefined (reading 'password')</p>
-        
-        <h2>Stack Trace:</h2>
-        <pre class="stack-trace">
+    <h1>500 - Internal Server Error</h1>
+
+    <h2>Error Message:</h2>
+    <pre>UnhandledPromiseRejection: Cannot read properties of undefined (reading 'password')</pre>
+
+    <h2>Stack Trace:</h2>
+    <pre>
 TypeError: Cannot read properties of undefined (reading 'password')
     at authenticateUser (/app/controllers/authController.js:67:20)
-    at async loginHandler (/app/routes/auth.js:42:15)
-    at async Layer.handle_request (/app/node_modules/express/lib/router/layer.js:95:5)
-    at async Route.dispatch (/app/node_modules/express/lib/router/route.js:112:3)
-    at async router (/app/node_modules/express/lib/router/admin-login.js:281:22)
-        </pre>
+    at loginHandler (/app/routes/auth.js:42:15)
+    at Layer.handle_request (/app/node_modules/express/lib/router/layer.js:95:5)
+    at Route.dispatch (/app/node_modules/express/lib/router/admin-login.js:112:3)
+    </pre>
 
-        <h2>Request Details:</h2>
-        <pre class="details">
+    <h2>Request Details:</h2>
+    <pre class="details">
 Endpoint: /api/login
 Method: POST
 Timestamp: 2025-02-18T12:34:56.789Z
-Client IP: 192.168.1.100
-User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)
-        </pre>
+    </pre>
 
-        <h2>Request Body:</h2>
-        <pre class="details">
+    <h2>Request Body:</h2>
+    <pre class="details">
 {
-    "username": "root",
-    "password": "qazwsx123"
+  "username": "root",
+  "password": "sfdSDF$#%#"
 }
-        </pre>
-
-        <h2>Environment Info:</h2>
-        <pre class="details">
-Node.js Version: v18.16.0
-Platform: macOS
-Memory Usage: { "rss": "62.11MB", "heapTotal": "34.71MB", "heapUsed": "28.03MB" }
-Uptime: 10234.567s
-        </pre>
-    </div>
+    </pre>
 
 </body>
 </html>

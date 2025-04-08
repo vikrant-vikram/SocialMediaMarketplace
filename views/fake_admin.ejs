@@ -10,6 +10,8 @@
 
 <!-- Custom CSS -->
 <style>
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
+
     body {
         font-family: 'Poppins', sans-serif;
         background: linear-gradient(to right, #141e30, #243b55);
@@ -24,15 +26,28 @@
         background: rgba(255, 255, 255, 0.1);
         padding: 30px;
         border-radius: 12px;
-        box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.3);
+        box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.3);
         text-align: center;
-        backdrop-filter: blur(10px);
-        width: 350px;
+        backdrop-filter: blur(12px);
+        width: 380px;
+        position: relative;
+        animation: fadeIn 1s ease-in-out;
     }
 
     h2 {
         color: #fff;
         margin-bottom: 15px;
+        font-weight: 600;
+    }
+
+    p.security-warning {
+        font-size: 14px;
+        color: rgba(255, 255, 255, 0.7);
+        background: rgba(255, 0, 0, 0.2);
+        padding: 10px;
+        border-radius: 8px;
+        margin-bottom: 15px;
+        font-weight: 500;
     }
 
     input {
@@ -67,8 +82,10 @@
         background: #0072ff;
     }
 
-    .fade-in {
-        animation: fadeIn 1s ease-in-out;
+    .zip-warning {
+        margin-top: 15px;
+        font-size: 13px;
+        color: rgba(255, 255, 255, 0.6);
     }
 
     @keyframes fadeIn {
@@ -86,12 +103,20 @@
 <%- include('parcials/after_import') %>
 <%- include('parcials/nav') %>
 
-<div class="login-container fade-in">
+<div class="login-container">
     <h2>Admin Login</h2>
+
+    <p class="security-warning">
+        ⚠️ With great power comes great responsibility. <br>
+        Do NOT reveal this page to attackers!
+    </p>
+
     <form action="/send-otp" method="POST">
         <input type="email" name="email" placeholder="Enter Gmail ID" required />
         <button type="submit">Send OTP</button>
     </form>
+
+    <p class="zip-warning">📂 ZIP file contains all system logs. Handle with care.</p>
 </div>
 
 <%- include('parcials/footer') %>

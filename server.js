@@ -9,7 +9,7 @@
 
 
 // ============================================== Importing Required Modules ===================================================================================================
-const cors = require("cors")
+// const cors = require("cors")
 require("dotenv").config()
 const path = require('path');
 const express = require('express');
@@ -35,6 +35,14 @@ const QRCode = require("qrcode");
 
 const cookieParser = require("cookie-parser");
 const session = require("express-session");
+const { Server } = require("socket.io");
+const cors = require("cors");
+const http = require("http");
+const sharedSession = require("express-socket.io-session");
+
+// const crypto = require("crypto");
+const { webcrypto } = require("crypto");
+// const fs = require("fs").promises; // Using promises for async file operations
 
 // =========================================================== Importing Required Models ===================================================================================================
 
@@ -79,6 +87,16 @@ app.use(cors({
 }));
 
 
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: "*", // Adjust this in production
+    methods: ["GET", "POST"],
+  },
+});
+
+
+
 mongoose.connect(DBSERVER)
   .then(() => console.log('Connected to MongoDB'))
   .catch(err => console.error('Could not connect to MongoDB', err));
@@ -99,18 +117,68 @@ app.use(cookieParser());
 //     res.locals.session = req.session;
 //     next();
 // });
+// const sessionMiddleware = session({
+//     secret: process.env.SECRET,
+//     resave: false,
+//     saveUninitialized: false,
+//     cookie: {
+//         httpOnly: true,
+//         secure: process.env.NODE_ENV === "production",
+//         sameSite: "Strict"
+//     }
+// });
 
 
-app.use(session({
+const MongoStore = require("connect-mongo");
+
+// const sessionMiddleware = session({
+//     secret: process.env.SECRET,
+//     resave: false,
+//     saveUninitialized: false,
+//     store: MongoStore.create({
+//         mongoUrl: process.env.MONGOOSE_DBSERVER, // Use your MongoDB URL
+//         collectionName: "sessions",
+//     }),
+//     cookie: {
+//         httpOnly: true,
+//         secure: process.env.NODE_ENV === "production", 
+//         sameSite: "Strict"
+//     }
+// });
+
+// app.use(sessionMiddleware);
+// io.use(sharedSession(sessionMiddleware, { autoSave: true }));
+// Update your session configuration:
+const sessionMiddleware = session({
     secret: process.env.SECRET,
     resave: false,
     saveUninitialized: false,
+    store: MongoStore.create({
+        mongoUrl: process.env.MONGOOSE_DBSERVER,
+        collectionName: "sessions",
+        ttl: 14 * 24 * 60 * 60 // 14 days
+    }),
     cookie: {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        sameSite: "Strict"
+        sameSite: 'Lax', // Changed from Strict to Lax for better compatibility
+        maxAge: 14 * 24 * 60 * 60 * 1000 // 14 days
     }
+});
+
+// Ensure proper ordering of middleware
+app.use(sessionMiddleware);
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
+
+// Socket.IO session sharing
+io.engine.use(sessionMiddleware); // Additional session attachment
+io.use(sharedSession(sessionMiddleware, {
+    autoSave: true,
+    saveUninitialized: false
 }));
+// app.use(sessionMiddleware);
 
 // Make session accessible in templates
 app.use((req, res, next) => {
@@ -121,7 +189,7 @@ app.use((req, res, next) => {
 // Apply CSRF Protection Middleware (Backend Only)
 app.use(csrfMiddleware);
 
-
+io.use(sharedSession(sessionMiddleware, { autoSave: true }));
 // app.use(passport.initialize());
 // app.use(passport.session());
 // passport.use(new passportlocal(User.authenticate()));
@@ -286,15 +354,128 @@ function isAdmin(req, res, next) {
 }
 
 
+app.use(cors());
 
 
 
 
+// const Message = mongoose.model("Message", messageSchema);
+
+// ================================================Socker io ===================================================================================================
+
+// io.on("connection", isLoggedIn,(socket) => {
+//     console.log("A user connected");
+//     console.log(socket.request.session.user);
+  
+//     // User joins a one-on-one chat
+//     socket.on("join", async ({ username, withUser }) => {
+//       socket.join(username);
+//       console.log(`📥 ${username} joined chat with ${withUser}`);
+  
+//       const messages = await Message.find({
+//         $or: [
+//           { sender: username, recipient: withUser },
+//           { sender: withUser, recipient: username },
+//         ],
+//       }).sort({ timestamp: 1 });
+  
+//       messages.forEach((msg) => {
+//         socket.emit("chat message", {
+//           sender: msg.sender,
+//           recipient: msg.recipient,
+//           encryptedMessage: msg.encryptedMessage,
+//           iv: msg.iv,
+//         });
+//       });
+//     });
+  
+//     // Handle incoming messages
+//     socket.on("chat message", async (data) => {
+//       const { sender, recipient, encryptedMessage, iv } = data;
+  
+//       const newMsg = new Message({
+//         sender,
+//         recipient,
+//         encryptedMessage,
+//         iv,
+//       });
+//       await newMsg.save();
+  
+//       // Send to recipient if online
+//       io.to(recipient).emit("chat message", data);
+  
+//       // Also send to sender (to show own message)
+//       io.to(sender).emit("chat message", data);
+//     });
+  
+//     socket.on("disconnect", () => {
+//       console.log(" A user disconnected");
+//     });
+//   });
 
 
+// 🔹 SOCKET.IO Connection
+io.on("connection", (socket) => {
+    console.log(" A user connected");
 
+    // 🔹 Access session inside socket connection
+    const session = socket.request.session;
+    console.log("Session data:", session);
+    if (!session || !session.user) {
+        console.log(" Unauthorized user attempted to connect via WebSocket");
+        return socket.disconnect(true); // Force disconnect unauthorized user
+    }
 
+    console.log("🔑 User authenticated via WebSocket:", session.user.username);
 
+    // Join chat
+    socket.on("join", async ({ username, withUser }) => {
+        socket.join(username);
+        console.log(`📥 ${username} joined chat with ${withUser}`);
+
+        const messages = await Message.find({
+            $or: [
+                { sender: session.user.username, recipient: withUser },
+                { sender: withUser, recipient: session.user.username },
+            ],
+        }).sort({ timestamp: 1 });
+
+        messages.forEach((msg) => {
+            socket.emit("chat message", {
+                sender: msg.sender,
+                recipient: msg.recipient,
+                encryptedMessage: msg.encryptedMessage,
+                iv: msg.iv,
+            });
+        });
+    });
+
+    // Handle chat messages
+    socket.on("chat message", async (data) => {
+        console.log("📩 New message received:", data);
+        const session = socket.request.session;
+
+        let { sender, recipient, encryptedMessage, iv } = data;
+        sender = session.user.username
+        const newMsg = new Message({
+            sender,
+            recipient,
+            encryptedMessage,
+            iv,
+        });
+        await newMsg.save();
+
+        // Send message to recipient and sender
+        io.to(recipient).emit("chat message", data);
+        io.to(sender).emit("chat message", data);
+    });
+
+    socket.on("disconnect", () => {
+        console.log(" A user disconnected");
+    });
+});
+
+  
 // ================================================ Get Request ===================================================================================================
 
 app.get('/', isLoggedIn, (req, res, next) => {
@@ -314,7 +495,21 @@ app.get('/search', isLoggedIn, async (req, res, next) => {
 
 
 app.get('/chat',isLoggedIn, async (req, res, next) => {
-    res.render('chat');
+        const currentUser = req.session.user; // Logged-in user
+        // Step 1: Find all pending follow requests where currentUser is the target
+        const pendingRequests = await Friendship.find({
+            status: "Accepted",
+            user_id: currentUser._id, // Current user is the recipient
+        }).populate("friend_id_or_follow_id", "username name profile_picture_url bio"); // Populate sender details
+
+        // Step 2: Extract users who sent requests
+        // console.log("Pending requests:", pendingRequests);
+        const usersWhoSentRequests = pendingRequests.map(request => request.friend_id_or_follow_id);
+
+        // Step 3: Pass the data to search.ejs
+        // console.log("Users who sent requests:", usersWhoSentRequests);
+
+    res.render('chat', { user: req.session.user , friends: usersWhoSentRequests});   
 });
   
   
@@ -384,7 +579,7 @@ app.get('/contact', (req, res) => {
 
 app.get("/blockunblock",isLoggedIn,function (req, res) {
 
-    res.render("search");
+    res.send("Abhi Nhi Kr sakte bhai");
 
 });
 
@@ -572,29 +767,87 @@ app.get("/follow/:username", isLoggedIn, totpMiddleware, resetMiddleware, async 
 });
 
 
+// app.get("/followrequest", isLoggedIn, async (req, res) => {
+//     try {
+//         const currentUser = req.session.user; // Logged-in user
+
+//         // Step 1: Find all pending follow requests where currentUser is the target
+//         const pendingRequests = await Friendship.find({
+//             status: "Pending",
+//             user_id: currentUser._id, // Current user is the recipient
+//         }).populate("friend_id_or_follow_id", "username name profile_picture_url bio"); // Populate sender details
+
+//         // Step 2: Extract users who sent requests
+//         console.log("Pending requests:", pendingRequests);
+//         const usersWhoSentRequests = pendingRequests.map(request => request.friend_id_or_follow_id);
+
+//         // Step 3: Pass the data to search.ejs
+//         console.log("Users who sent requests:", usersWhoSentRequests);
+//         res.render("followrequest", { users: usersWhoSentRequests });
+//     } catch (error) {
+//         console.error("Error fetching follow requests:", error);
+//         res.status(500).json({ error: "Internal server error" });
+//     }
+// });
 app.get("/followrequest", isLoggedIn, async (req, res) => {
     try {
-        const currentUser = req.session.user; // Logged-in user
+        // 1. Validate user session
+        if (!req.session.user?._id) {
+            console.error('No valid user session');
+            return res.status(401).redirect('/login');
+        }
 
-        // Step 1: Find all pending follow requests where currentUser is the target
+        const currentUserId = req.session.user._id;
+        
+        // 2. Find all pending requests where current user is the recipient (user_id)
         const pendingRequests = await Friendship.find({
             status: "Pending",
-            user_id: currentUser._id, // Current user is the recipient
-        }).populate("friend_id_or_follow_id", "username name profile_picture_url bio"); // Populate sender details
+            friend_id_or_follow_id: currentUserId  // The user being followed (recipient)
+        })
+        .populate({
+            path: "user_id",  // The user who sent the request (requester)
+            select: "_id username name profile_picture_url bio",
+            model: "User"
+        })
+        .sort({ request_sent: -1 })  // Sort by most recent requests first
+        .lean();
 
-        // Step 2: Extract users who sent requests
-        console.log("Pending requests:", pendingRequests);
-        const usersWhoSentRequests = pendingRequests.map(request => request.friend_id_or_follow_id);
+        // 3. Extract and format requesters' data
+        const requesters = pendingRequests.map(request => {
+            if (!request.user_id) return null;
+            
+            return {
+                _id: request.user_id._id,
+                username: request.user_id.username,
+                name: request.user_id.name,
+                profile_picture_url: request.user_id.profile_picture_url,
+                bio: request.user_id.bio,
+                requestId: request._id,  // The friendship request ID
+                requestDate: request.request_sent
+            };
+        }).filter(Boolean);  // Remove any null entries
 
-        // Step 3: Pass the data to search.ejs
-        console.log("Users who sent requests:", usersWhoSentRequests);
-        res.render("followrequest", { users: usersWhoSentRequests });
+        // 4. Render the view
+        console.log("Follow requests:", requesters);
+        res.render("followrequest", {
+            title: "Follow Requests",
+            users: requesters,
+            currentUserId: currentUserId,
+            isEmpty: requesters.length === 0
+        });
+
     } catch (error) {
-        console.error("Error fetching follow requests:", error);
-        res.status(500).json({ error: "Internal server error" });
+        console.error("Follow request error:", {
+            error: error.message,
+            userId: req.session.user?._id,
+            stack: error.stack
+        });
+        res.status(500).render('error', {
+            message: 'Failed to load follow requests',
+            error: process.env.NODE_ENV === 'development' ? error : null
+        });
     }
 });
-
 
 app.get("/friends", isLoggedIn, async (req, res) => {
     try {
@@ -619,6 +872,112 @@ app.get("/friends", isLoggedIn, async (req, res) => {
     }
 });
 
+// app.get("'/accept/follow/:username", isLoggedIn, async (req, res) => {       
+
+
+
+//     const username = req.params.username;
+//     console.log("Accepting follow request from:", username);
+//     try {
+//         // Step 1: Find friend user's ObjectId
+//         const friendUser = await Users.findOne({ username });
+
+//         if (!friendUser) {
+//             return res.status(404).json({ success: false, message: 'User not found' });
+//         }
+
+//         console.log('Accepting follow request from:', friendUser._id);
+
+//         // Step 2: Find and update friendship record
+//         const friendRequest = await Friendship.findOneAndUpdate(
+//             {
+//                 user_id: friendUser._id,              // Current logged-in user is recipient
+//                 friend_id_or_follow_id: req.session.user._id, // This is the request sender
+//                 status: 'Pending'
+//             },
+//             { $set: { status: 'Accepted' } },
+//             { new: true }  // Return updated document
+//         );
+
+//         if (!friendRequest) {
+//             console.log('No matching friend request found for:', friendUser._id);
+//             return res.status(404).json({ success: false, message: 'Friend request not found' });
+//         }
+
+//         console.log('Friend request accepted:', friendRequest);
+//         res.json({ success: true, message: 'Friend request accepted' });
+
+//     } catch (error) {
+//         console.error('Error accepting friend request:', error);
+//         res.status(500).json({ success: false, message: 'Internal server error' });
+//     }
+// });
+
+
+
+// this one accept the request
+app.get("/accept/follow/:username", isLoggedIn, async (req, res) => {
+    try {
+        // 1. Validate inputs
+        const { username } = req.params;
+        const currentUserId = req.session.user._id;
+        
+        if (!username || !currentUserId) {
+            console.error('Invalid parameters:', { username, currentUserId });
+            return res.status(400).json({ success: false, message: 'Invalid request' });
+        }
+
+        console.log(`Accepting follow request from ${username} for user ${currentUserId}`);
+
+        // 2. Find the requesting user (Use correct model reference: "User" instead of "Users")
+        const requestingUser = await Users.findOne({ username }).select('_id');
+        if (!requestingUser) {
+            console.error('Requesting user not found:', username);
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+
+        // 3. Verify the pending request exists (Ensure IDs are `ObjectId`)
+        const existingRequest = await Friendship.findOne({
+            user_id: new mongoose.Types.ObjectId(requestingUser._id),  // Ensure it's ObjectId
+            friend_id_or_follow_id: new mongoose.Types.ObjectId(currentUserId), // Ensure it's ObjectId
+            status: 'Pending'
+        });
+
+        if (!existingRequest) {
+            console.error('No pending request found from:', {
+                requester: requestingUser._id,
+                recipient: currentUserId
+            });
+            return res.status(404).json({ 
+                success: false, 
+                message: 'No pending request found from this user' 
+            });
+        }
+
+        // 4. Update the request status
+        const updatedRequest = await Friendship.findByIdAndUpdate(
+            existingRequest._id,
+            { $set: { status: 'Accepted', updated_at: new Date() } },  // Ensure `updated_at` is defined in schema
+            { new: true }
+        );
+
+        console.log('Successfully accepted request:', updatedRequest);
+        res.redirect(`/user/${username}`); // Redirect to the user's profile page
+
+    } catch (error) {
+        console.error('Error accepting follow request:', {
+            error: error.message,
+            stack: error.stack,
+            params: req.params,
+            userId: req.session.user?._id
+        });
+        res.status(500).json({ 
+            success: false, 
+            message: 'Internal server error',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+});
 
 
 app.post('/accept-friend', isLoggedIn,totpMiddleware, resetMiddleware,async (req, res) => {
@@ -1011,107 +1370,23 @@ app.get("/order", isLoggedIn,totpMiddleware, resetMiddleware, async (req, res) =
 
 
 
-app.post("/order", isLoggedIn,async (req, res) => {
-    try {
-        // Fetch cart items
-        const cart = await Cart.find({ username: req.session.user._id });
-        if (!cart.length) return res.render("error");
-
-        let totalAmount = 0;
-        let orderItems = [];
-
-        // Calculate total price and prepare order data
-        for (const cartItem of cart) {
-            const item = await Items.findOne({ name: cartItem.itemname });
-            const price = item.price * cartItem.quantity;
-            totalAmount += price;
-
-            orderItems.push({
-                username: req.session.user._id,
-                typ: req.session.user.type,
-                name: req.body.name,
-                itemname: cartItem.itemname,
-                deliverydate: req.body.date,
-                zip: req.body.zip,
-                contact: req.body.contact,
-                address1: req.body.address1,
-                quantity: cartItem.quantity,
-                price
-            });
-        }
-        console.log("Order Items:", orderItems);
-
-        const session = await stripe.checkout.sessions.create({
-            payment_method_types: ["card"],
-            mode: "payment", // For one-time payments, use "payment"
-            line_items: [
-                {
-                    price_data: {
-                        currency: 'inr',
-                        product_data: {
-                            name: "Order",
-                        },
-                        unit_amount: totalAmount, // Stripe expects the amount in the smallest currency unit (paise)
-                    },
-                    quantity: 1, // Adjust the quantity if needed
-                },
-            ],
-            success_url: `${process.env.SERVER_URL}/profile`, // Ensure the correct success URL
-            cancel_url: `${process.env.SERVER_URL}/error`,    // Ensure the correct cancel URL
-        });
-        // Create Stripe Payment Intent
-        // const paymentIntent = await stripe.paymentIntents.create({
-        //     amount: totalAmount * 100, // Convert to cents (Stripe uses smallest currency unit)
-        //     currency: "usd",
-        //     payment_method_types: ["card"]
-        // });
-
-        // Store orders in DB after successful payment
-        for (const order of orderItems) {
-            await Orders.create(order);
-        }
-
-        // Clear cart after order is placed
-        await Cart.deleteMany({ username: req.session.user._id });
-
-        // Fetch updated order history
-        const orderHistory = await Orders.find({ username: req.session.user._id });
-
-        res.redirect(session.url)
-        console.log(session)
-        // res.render("history", { order: orderHistory, clientSecret: paymentIntent.client_secret });
-    } catch (err) {
-        console.error(err);
-        res.render("error");
-    }
-});
-
-
-
-// ==========  **POST: Place Order with Stripe Checkout** check this once
-
-
-// app.post("/order", isLoggedIn, async (req, res) => {
+// app.post("/order", isLoggedIn,async (req, res) => {
 //     try {
 //         // Fetch cart items
-//         const cart = await Cart.find({ username: req.session.user.username }); 
-//         if (!cart.length) return res.render("error"); // Ensure cart is not empty
+//         const cart = await Cart.find({ username: req.session.user._id });
+//         if (!cart.length) return res.render("error");
 
 //         let totalAmount = 0;
+//         let orderItems = [];
 
-//         // Fetch all item details in parallel
-//         const itemNames = cart.map(cartItem => cartItem.itemname);
-//         const items = await Items.find({ name: { $in: itemNames } });
-
-//         if (items.length !== cart.length) return res.render("error"); // Prevent order if any item is missing
-
-//         // Prepare order items
-//         const orderItems = cart.map(cartItem => {
-//             const item = items.find(i => i.name === cartItem.itemname);
+//         // Calculate total price and prepare order data
+//         for (const cartItem of cart) {
+//             const item = await Items.findOne({ name: cartItem.itemname });
 //             const price = item.price * cartItem.quantity;
 //             totalAmount += price;
-//             return {
-//                 username: req.session.user.username,
+
+//             orderItems.push({
+//                 username: req.session.user._id,
 //                 typ: req.session.user.type,
 //                 name: req.body.name,
 //                 itemname: cartItem.itemname,
@@ -1121,74 +1396,180 @@ app.post("/order", isLoggedIn,async (req, res) => {
 //                 address1: req.body.address1,
 //                 quantity: cartItem.quantity,
 //                 price
-//             };
-//         });
-
+//             });
+//         }
 //         console.log("Order Items:", orderItems);
 
-//         // Create Stripe Checkout Session
 //         const session = await stripe.checkout.sessions.create({
 //             payment_method_types: ["card"],
-//             mode: "payment",
-//             line_items: [{
-//                 price_data: {
-//                     currency: 'inr',
-//                     product_data: { name: "Order" },
-//                     unit_amount: totalAmount * 100, // Convert Rupees to Paise
+//             mode: "payment", // For one-time payments, use "payment"
+//             line_items: [
+//                 {
+//                     price_data: {
+//                         currency: 'inr',
+//                         product_data: {
+//                             name: "Order",
+//                         },
+//                         unit_amount: totalAmount, // Stripe expects the amount in the smallest currency unit (paise)
+//                     },
+//                     quantity: 1, // Adjust the quantity if needed
 //                 },
-//                 quantity: 1,
-//             }],
-//             success_url: `${process.env.SERVER_URL}/order-success?session_id={CHECKOUT_SESSION_ID}`, // Redirect here after success
-//             cancel_url: `${process.env.SERVER_URL}/error`,
+//             ],
+//             success_url: `${process.env.SERVER_URL}/profile`, // Ensure the correct success URL
+//             cancel_url: `${process.env.SERVER_URL}/error`,    // Ensure the correct cancel URL
 //         });
+//         // Create Stripe Payment Intent
+//         // const paymentIntent = await stripe.paymentIntents.create({
+//         //     amount: totalAmount * 100, // Convert to cents (Stripe uses smallest currency unit)
+//         //     currency: "usd",
+//         //     payment_method_types: ["card"]
+//         // });
 
-//         res.redirect(session.url);
-//         console.log("Stripe Session:", session);
-
-//         // Do not store orders in DB yet! Store them only after successful payment.
-//     } catch (err) {
-//         console.error("Order Error:", err);
-//         res.render("error");
-//     }
-// });
-
-// //  Store Order After Payment is Successful
-// app.get("/order-success", isLoggedIn, async (req, res) => {
-//     try {
-//         const session = await stripe.checkout.sessions.retrieve(req.query.session_id);
-
-//         if (!session || session.payment_status !== "paid") {
-//             return res.render("error"); // Prevent incomplete orders
+//         // Store orders in DB after successful payment
+//         for (const order of orderItems) {
+//             await Orders.create(order);
 //         }
 
-//         const username = req.session.user.username;
-//         const cart = await Cart.find({ username });
+//         // Clear cart after order is placed
+//         await Cart.deleteMany({ username: req.session.user._id });
 
-//         const orderItems = cart.map(cartItem => ({
-//             username,
-//             typ: req.session.user.type,
-//             name: req.session.user.name,
-//             itemname: cartItem.itemname,
-//             deliverydate: new Date().toISOString(),
-//             zip: "000000",
-//             contact: "N/A",
-//             address1: "N/A",
-//             quantity: cartItem.quantity,
-//             price: cartItem.quantity * 100, // Store actual price
-//         }));
+//         // Fetch updated order history
+//         const orderHistory = await Orders.find({ username: req.session.user._id });
 
-//         // Store orders in DB
-//         await Orders.insertMany(orderItems);
-
-//         // Clear cart after successful payment
-//         await Cart.deleteMany({ username });
-
-//         res.render("history", { order: orderItems });
-//     } catch (error) {
-//         console.error("Order Success Error:", error);
+//         res.redirect(session.url)
+//         console.log(session)
+//         // res.render("history", { order: orderHistory, clientSecret: paymentIntent.client_secret });
+//     } catch (err) {
+//         console.error(err);
 //         res.render("error");
 //     }
 // });
+
+
+
+// ==========  **POST: Place Order with Stripe Checkout** check this once
+
+
+app.post("/order", isLoggedIn, async (req, res) => {
+    try {
+        // Fetch cart items
+        const cart = await Cart.find({username: req.session.user._id  }); 
+        if (!cart.length) return res.render("error"); // Ensure cart is not empty
+
+        let totalAmount = 0;
+
+        // Fetch all item details in parallel
+        const itemNames = cart.map(cartItem => cartItem.itemname);
+        const items = await Items.find({ name: { $in: itemNames } });
+
+        if (items.length !== cart.length) return res.render("error"); // Prevent order if any item is missing
+
+        // Prepare order items
+
+        for (const cartItem of cart) {
+            const item = await Items.findOne({ name: cartItem.itemname });
+            const orderData = {
+                username: req.session.user._id, typ: req.session.user.type, name: req.body.name,
+                itemname: cartItem.itemname, deliverydate: req.body.date, zip: req.body.zip,
+                contact: req.body.contact, address1: req.body.address1, quantity: cartItem.quantity,
+                price: item.price
+            };
+            await Orders.create(orderData);
+        }
+
+        const orderItems = cart.map(cartItem => {
+            const item = items.find(i => i.name === cartItem.itemname);
+            const price = item.price * cartItem.quantity;
+            totalAmount += price;
+            return {
+                username:req.session.user._id ,
+                typ: req.session.user.type,
+                name: req.body.name,
+                itemname: cartItem.itemname,
+                deliverydate: req.body.date,
+                zip: req.body.zip,
+                contact: req.body.contact,
+                address1: req.body.address1,
+                quantity: cartItem.quantity,
+                price
+            };
+        });
+
+        console.log("Order Items:", orderItems);
+
+        // Create Stripe Checkout Session
+        const session = await stripe.checkout.sessions.create({
+            payment_method_types: ["card"],
+            mode: "payment",
+            line_items: [{
+                price_data: {
+                    currency: 'inr',
+                    product_data: { name: "Order" },
+                    unit_amount: totalAmount * 100, // Convert Rupees to Paise
+                },
+                quantity: 1,
+            }],
+            success_url: `${process.env.SERVER_URL}/order-success?session_id={CHECKOUT_SESSION_ID}`, // Redirect here after success
+            cancel_url: `${process.env.SERVER_URL}/error`,
+        });
+
+        res.redirect(session.url);
+        console.log("Stripe Session:", session);
+
+        // Do not store orders in DB yet! Store them only after successful payment.
+    } catch (err) {
+        console.error("Order Error:", err);
+        res.render("error");
+    }
+});
+app.get("/order-success", isLoggedIn, async (req, res) => {
+    try {
+        if (!req.session.user) {
+            console.warn(" User session lost after payment. Redirecting to login.");
+            return res.redirect("/login");
+        }
+
+        const session = await stripe.checkout.sessions.retrieve(req.query.session_id);
+
+        if (!session || session.payment_status !== "paid") {
+            return res.render("error"); // Prevent incomplete orders
+        }
+
+        const username = req.session.user._id;
+        if (!username) {
+            return res.redirect("/login"); // Ensure user is logged in
+        }
+
+        const cart = await Cart.find({ username });
+
+        if (!cart.length) {
+            return res.render("error", { message: "No items found in your cart." });
+        }
+
+        const orderItems = cart.map(cartItem => ({
+            username,
+            typ: req.session.user.type,
+            name: req.session.user.name,
+            itemname: cartItem.itemname,
+            deliverydate: new Date().toISOString(),
+            zip: req.session.user.zip || "000000",
+            contact: req.session.user.contact || "N/A",
+            address1: req.session.user.address1 || "N/A",
+            quantity: cartItem.quantity,
+            price: cartItem.quantity * 100,
+        }));
+
+        await Orders.insertMany(orderItems);
+        await Cart.deleteMany({ username });
+
+        console.log(" Order stored successfully & cart cleared.");
+
+        res.render("history", { order: orderItems });
+    } catch (error) {
+        console.error("Order Success Error:", error);
+        res.render("error");
+    }
+});
 
 
 
@@ -1837,7 +2218,11 @@ app.post("/login", async function(req, res) {
             req.session.email = user.email;
             console.log("Email not verified");
             return res.redirect("/verifyemail");
-            };
+            };       
+            
+            if(user.is_suspended == true){
+                return res.send("You have been suspended. Please contact support. hihahah");
+                };
         const totpSecret = speakeasy.generateSecret({ length: 20 });
         if(!user.totp_secret){        
             const otpauth_url = totpSecret.otpauth_url;
@@ -1929,6 +2314,21 @@ app.post("/login", async function(req, res) {
             return res.render("login");
         }
         console.log("User authenticated");
+
+        if (!user.public_key || !user.encrypted_private_key) {
+            console.log("Generating new cryptographic keys for user...");
+            const { publicKey, privateKey } = generateRSAKeyPair();
+            const aesKey = generateAESKey();
+            const encryptedAESKey = encryptAESKey(publicKey, aesKey).toString("hex");
+            const { encryptedData: encryptedPrivateKey, iv: ivPrivateKey } = encryptWithAES(aesKey, privateKey);
+            user.public_key = publicKey;
+            user.encrypted_private_key = JSON.stringify({ data: encryptedPrivateKey, iv: ivPrivateKey });
+            user.encrypted_aes_key = encryptedAESKey;
+    
+            await user.save();
+            console.log("Keys generated and stored successfully.");
+        }
+
         req.session.user = user;
         totpMiddleware(req, res, function () {
            
@@ -1955,7 +2355,6 @@ app.post("/profile/update", isLoggedIn,resetMiddleware,upload.single("profile_pi
         // Prepare updated user data
         req.boady = req.session.pendingFormData;
         const updatedData = {
-            username: req.body.username,
             name: req.body.name,
             bio: req.body.bio,
             updated_at: Date.now(),
@@ -2213,85 +2612,152 @@ function checkForLogin(req,res,next)
 
 
 
-function formVailidation(req,res,next){
+// function formVailidation(req,res,next){
 
-    username =req.body.username
-    name =req.body.name
-    email =req.body.email
-    mobile_number = req.body.mobile_number
-    password = req.body.password
+//     username =req.body.username
+//     name =req.body.name
+//     email =req.body.email
+//     mobile_number = req.body.mobile_number
+//     password = req.body.password
  
 
-    if( emailValidation(email)  && passwordVailidation(password)  && contactVailidation(mobile_number) && nameValidation(name)){
+//     if( emailValidation(email)  && passwordVailidation(password)  && contactVailidation(mobile_number) && nameValidation(name)){
         
+//         return next();
+//     }
+
+//     else{
+//         console.log("Form Vailidation failed")
+//         return res.send("Form Vailidation failed! Follow the rules and try again.");
+//     }
+// }
+
+
+
+
+// function nameValidation(name){
+//     console.log("Name:", name);
+//     const nameRegex = /^[a-zA-Z]+(([',. -][a-zA-Z ])?[a-zA-Z]*)*$/;
+//     if(nameRegex.test(name))
+//     {
+        
+//         return true;
+//     }
+//     else
+//     {
+//         console.log("Name verification failed.")
+//         return false;
+//     }
+// }
+
+// function emailValidation(email){
+//     var mailformat = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
+//     if(mailformat.test(email))
+//     {
+        
+//         return true;
+//     }
+//     else
+//     {
+//         console.log("Email verification failed.")
+//         return false;
+//     }
+
+
+// }
+
+// function passwordVailidation(password){
+//     const passwordRegex = /^(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?])(?=.*[a-zA-Z]).{8,}$/;
+//     if(passwordRegex.test(password))
+//     {
+        
+//         return true;
+//     }
+//     else
+    
+//     {
+//         console.log("Password verification failed.", password)
+//         return false;
+//     }
+// }
+
+// function contactVailidation(contact){
+//     const contactRegex = /[1-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]/;
+
+//     if(contactRegex.test(contact))
+//     {
+        
+//         return true;
+//     }
+//     else
+//     {
+//         console.log("Contact verification failed.")
+//         return false;
+//     }
+// }
+
+
+
+function formVailidation(req, res, next) {
+    const { username, name, email, mobile_number, password } = req.body;
+
+    if (username &&
+        emailValidation(email) &&
+        passwordValidation(password) &&
+        contactValidation(mobile_number) &&
+        nameValidation(name)
+    ) {
         return next();
-    }
-
-    else{
-        console.log("Form Vailidation failed")
-        return res.send("Form Vailidation failed! Follow the rules and try again.");
+    } else {
+        console.log(" Form Validation Failed!");
+        return res.status(400).send("Form validation failed! Please follow the required format and try again.");
     }
 }
 
-
-
-
-function nameValidation(name){
-    console.log("Name:", name);
+//  Name Validation (Only alphabets & some special characters like apostrophes)
+function nameValidation(name) {
+    console.log("Validating Name:", name);
     const nameRegex = /^[a-zA-Z]+(([',. -][a-zA-Z ])?[a-zA-Z]*)*$/;
-    if(nameRegex.test(name))
-    {
-        
+    if (nameRegex.test(name)) {
         return true;
-    }
-    else
-    {
-        console.log("Name verification failed.")
+    } else {
+        console.log(" Name validation failed.");
         return false;
     }
 }
 
-function emailValidation(email){
-    var mailformat = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
-    if(mailformat.test(email))
-    {
-        
+//  Email Validation (Standard email format)
+function emailValidation(email) {
+    console.log("Validating Email:", email);
+    const emailRegex = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
+    if (emailRegex.test(email)) {
         return true;
-    }
-    else
-    {
-        console.log("Email verification failed.")
+    } else {
+        console.log(" Email validation failed.");
         return false;
     }
-
-
 }
 
-function passwordVailidation(password){
+//  Password Validation (At least 8 chars, one uppercase, one lowercase, one number, one special character)
+function passwordValidation(password) {
+    console.log("Validating Password:", password);
     const passwordRegex = /^(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?])(?=.*[a-zA-Z]).{8,}$/;
-    if(passwordRegex.test(password))
-    {
-        
+    if (passwordRegex.test(password)) {
         return true;
-    }
-    else
-    {
-        console.log("Password verification failed.")
+    } else {
+        console.log(" Password validation failed.");
         return false;
     }
 }
 
-function contactVailidation(contact){
-    const contactRegex = /[1-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]/;
-
-    if(contactRegex.test(contact))
-    {
-        
+//  Contact Validation (Exactly 10 digits, starts with 1-9)
+function contactValidation(contact) {
+    console.log("Validating Contact:", contact);
+    const contactRegex = /^[1-9][0-9]{9}$/;
+    if (contactRegex.test(contact)) {
         return true;
-    }
-    else
-    {
-        console.log("Contact verification failed.")
+    } else {
+        console.log(" Contact validation failed.");
         return false;
     }
 }
@@ -2522,11 +2988,13 @@ async function saveMediaDetails(req, file, fileType) {
 
 
 // ==================================================== Listen ===================================================================================================
-app.listen(PORT, () => {
+// app.listen(PORT, () => {
+//     console.log('serever is live at  port  no: %s', PORT )
+// });
+
+server.listen(PORT, () => {
     console.log('serever is live at  port  no: %s', PORT )
-});
-
-
+  });
 
 // async function sheed(req, res) {
 //     try {
@@ -2617,3 +3085,87 @@ async function sheed(req, res) {
         res.status(500).send("Error saving item.");
     }
 }
+
+
+
+
+
+
+
+// ============================= Key Generation Part==================
+
+// Generate a 2048-bit RSA key pair
+function generateRSAKeyPair() {
+  return crypto.generateKeyPairSync("rsa", {
+    modulusLength: 2048,
+    publicKeyEncoding: {
+      type: "spki",
+      format: "pem",
+    },
+    privateKeyEncoding: {
+      type: "pkcs8",
+      format: "pem",
+    },
+  });
+}
+
+function generateAESKey() {
+  return crypto.randomBytes(32);
+}
+
+// Encrypt the AES key with the RSA public key
+function encryptAESKey(publicKey, aesKeyBuffer) {
+  return crypto.publicEncrypt(
+    {
+      key: publicKey,
+      padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
+      oaepHash: "sha256",
+    },
+    aesKeyBuffer
+  );
+}
+
+// Decrypt the AES key with the RSA private key
+function decryptAESKey(privateKey, encryptedAesKey) {
+  return crypto.privateDecrypt(
+    {
+      key: privateKey,
+      padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
+      oaepHash: "sha256",
+    },
+    encryptedAesKey
+  );
+}
+function encryptWithAES(aesKey, data) {
+    const iv = crypto.randomBytes(16); // Initialization Vector
+    const cipher = crypto.createCipheriv("aes-256-cbc", aesKey, iv);
+    let encrypted = cipher.update(data, "utf8", "hex");
+    encrypted += cipher.final("hex");
+    return { encryptedData: encrypted, iv: iv.toString("hex") };
+  }
+  function decryptWithAES(aesKey, encryptedData, iv) {
+    const decipher = crypto.createDecipheriv("aes-256-cbc", aesKey, Buffer.from(iv, "hex"));
+    let decrypted = decipher.update(encryptedData, "hex", "utf8");
+    decrypted += decipher.final("utf8");
+    return decrypted;
+  }
+// (async () => {
+//   // Generate RSA key pair
+//   const { publicKey, privateKey } = generateRSAKeyPair();
+
+//   // Generate AES key
+//   const aesKey = generateAESKey();
+
+//   // Encrypt the AES key with the RSA public key
+//   const encryptedAesKey = encryptAESKey(publicKey, aesKey);
+//   console.log("Encrypted AES Key:", encryptedAesKey.toString("hex"));
+
+//   // Decrypt the AES key with the RSA private key
+//   const decryptedAesKey = decryptAESKey(privateKey, encryptedAesKey);
+//   console.log("Decrypted AES Key:", decryptedAesKey.toString("hex"));
+
+//   // Verify that the decrypted AES key matches the original
+//   if (!aesKey.equals(decryptedAesKey)) {
+//     throw new Error("Decrypted AES key does not match the original");
+//   }
+// })();

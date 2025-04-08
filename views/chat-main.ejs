@@ -108,7 +108,7 @@
 
 
         <!-- Chat Section -->
-    <section class="chat-section">
+    <!-- <section class="chat-section">
         <div class="chat-box">
             <div class="chat-header">
                 <h2>Chat</h2>
@@ -128,7 +128,7 @@
                 <button>Send</button>
             </div>
         </div>
-    </section>
+    </section> -->
 
 
     <!-- Horizont Scroll -->
@@ -152,6 +152,17 @@
                 <h2>Photo Title 4</h2>
             </div>
         </section> -->
+        <div id="chat">
+            <h2>Chat Room</h2>
+            <input type="text" id="username" placeholder="Your name" />
+            <input id="recipient" placeholder="To (recipient)" />
+            <input type="text" id="message" placeholder="Type a message" />
+            <button id="sendBtn">Send</button>
+            <div id="messages"></div>
+        </div>
+        
+          <script src="/socket.io/socket.io.js"></script>
+        <script src="/js/chat.js"></script>
 
 
     </div>

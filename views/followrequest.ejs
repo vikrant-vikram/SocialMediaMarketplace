@@ -1,95 +1,124 @@
 <%- include('parcials/before_import') %>
+<link rel="stylesheet" href="/css/search.css" />
+<link rel="stylesheet" href="/css/search-bar.css" />
 
-<!-- <link rel="stylesheet" href="/css/search.css" /> -->
 
-<!-- locomotive-scroll -->
+<!-- Locomotive Scroll -->
 <link rel="stylesheet"
-	href="https://cdn.jsdelivr.net/npm/locomotive-scroll@3.2.5/dist/locomotive-scroll.min.css"
+    href="https://cdn.jsdelivr.net/npm/locomotive-scroll@3.2.5/dist/locomotive-scroll.min.css"
 />
 <script src="https://cdn.jsdelivr.net/npm/locomotive-scroll@3.2.5/dist/locomotive-scroll.min.js"></script>
+
 <%- include('parcials/after_import') %>
-<!-- navbar -->
+<!-- Navbar -->
 <%- include('parcials/nav') %>
-<!-- navbar -->
+<!-- Navbar -->
 
-	<div class='search_con'>
-		<form action="/search" method="get" class="input_con">
-			<input type="text" placeholder='Search for Query...' spellCheck="false" id="queryFind"/>
-			<span id="clearBtn"><i class="bi bi-x-lg"></i></span>
-			<span class='h-line'></span>
-			<a href="https://t.me/rawnge" target="_blank">
-			<span><i class="bi bi-search"></i></span>
-			</a>
-		</form>
-	</div>
+<div class='search_con'>
+    <form action="#" method="get" class="input_con" onsubmit="return false;">
+        <input type="text" placeholder="Search for users..." spellCheck="false" id="queryFind" oninput="searchUsers()" />
+        <span id="clearBtn" onclick="clearSearch()"><i class="bi bi-x-lg"></i></span>
+        <span class="h-line"></span>
+        <span><i class="bi bi-search"></i></span>
+    </form>
+</div>
 
-	<div class="divider"></div>
+<!-- Search Results -->
+<div id="searchResults"></div>
 
-	<section class="project">
-		<div class="project-container">
-			<div>
-				<nav class="menu">
-					<% users.forEach(user => { %>
-						<div class="menu__item">
-                            <a class="menu__item-link" >/ <%= user.name || user.username %></a>
-                            <img class="menu__item-img" src="<%= user.profile_picture_url ? user.profile_picture_url : '/images/default-avatar.png' %>" alt="<%= user.username %>" />
-                            
-                            <!-- Accept Friend Button -->
-                            
-                        
-                            <div class="marquee" onclick="acceptFriend('<%= user.username %>')">
-                                <div class="marquee__inner">
-                                    <span><%= user.username %></span>
-                                    <span><%= user.username %></span>
-                                    <span><%= user.username %></span>
-                                    <span><%= user.username %></span>
-                                </div>
+<!-- Story bar -->
+<div class="story-bar">
+    <% users.forEach(user => { %>
+        <div class="story">
+            <a href="/story/<%= user.username %>">
+                <div class="story-image">
+                    <img src="<%= user.profile_picture_url ? user.profile_picture_url : '/images/default-avatar.png' %>" alt="story" />
+                </div>
+            </a>
+            <div class="story-username"><%= user.username %></div>
+        </div>
+    <% }) %>
+</div>
+
+<div class="divider"></div>
+
+<!-- User List -->
+<section class="project">
+    <div class="project-container">
+        <div>
+            <nav class="menu">
+                <% users.forEach(user => { %>
+                    <div class="menu__item">
+                        <a class="menu__item-link" href="/accept/follow/<%= user.username %>">/ <%= user.name || user.username %></a>
+
+                        <!-- Display profile picture -->
+                        <img class="menu__item-img" src="<%= user.profile_picture_url ? user.profile_picture_url : '/images/default-avatar.png' %>" alt="<%= user.username %>" />
+
+                        <div class="marquee">
+                            <div class="marquee__inner">
+                                <span><%= user.username %></span>
+                                <span><%= user.username %></span>
+                                <span><%= user.username %></span>
+                                <span><%= user.username %></span>
                             </div>
                         </div>
-						<div class="divider"></div>
-					<% }) %>
-				</nav>
-			</div>
-		</div>
+                    </div>
+                    <div class="divider"></div>
+                <% }) %>
+            </nav>
+        </div>
+    </div>
+</section>
 
-	</section>
+<div class="whitespace"></div>
 
-	<div class="whitespace"></div>
+<script>
+    // Store all users from the existing EJS data
+    const allUsers = [
+        <% users.forEach(user => { %>
+            {
+                username: "<%= user.username %>",
+                name: "<%= user.name || '' %>",
+                profile_picture_url: "<%= user.profile_picture_url ? user.profile_picture_url : '/images/default-avatar.png' %>"
+            },
+        <% }) %>
+    ];
 
+    function searchUsers() {
+        const query = document.getElementById("queryFind").value.trim().toLowerCase();
+        const resultsContainer = document.getElementById("searchResults");
 
-	<script>
-		const scroll = new LocomotiveScroll({
-			el: document.querySelector("#js-scroll"),
-			smooth: true,
-			smoothMobile: true,
-			inertia: 0.50,
-		});
-
-
-        function acceptFriend(username) {
-            fetch('/accept-friend', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ username })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    
-                    window.location.href = '/followrequest';
-
-                    // Optionally, update UI (e.g., hide the button)
-                } else {
-                    alert('Failed to accept friend request');
-                }
-            })
-            .catch(err => console.error('Error:', err));
+        if (query.length === 0) {
+            resultsContainer.style.display = "none";
+            return;
         }
 
+        // Filter users based on search query
+        const filteredUsers = allUsers.filter(user =>
+            user.username.toLowerCase().includes(query) ||
+            user.name.toLowerCase().includes(query)
+        );
 
-	</script>
-    <script src="/js/scroll.js"></script>
+        // Display results
+        if (filteredUsers.length > 0) {
+            resultsContainer.style.display = "block";
+            resultsContainer.innerHTML = filteredUsers.map(user => `
+                <div class="search-result-item">
+                    <a href="/follow/${user.username}">
+                        <img src="${user.profile_picture_url}" alt="${user.username}" />
+                        <span>${user.name || user.username}</span>
+                    </a>
+                </div>
+            `).join("");
+        } else {
+            resultsContainer.style.display = "none";
+        }
+    }
+
+    function clearSearch() {
+        document.getElementById("queryFind").value = "";
+        document.getElementById("searchResults").style.display = "none";
+    }
+</script>
+
 <%- include('parcials/footer') %>
-
