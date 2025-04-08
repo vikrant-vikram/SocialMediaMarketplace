@@ -10,8 +10,12 @@ let currentUser = "";
 let chatPartner = "";
 
 // Static AES key for demo purposes
-const sharedKeyHex =
-  "67a25ddc998b98cb8d18475d858120b78e7e51caa84aff33396f0acae7b11fd2";
+
+
+const sharedKeyHex = [
+  0x67a25ddc, 0x998b98cb, 0x8d18475d, 0x858120b7,
+  0x8e7e51ca, 0xa84aff33, 0x396f0aca, 0xe7b11fd2
+].map(n => n.toString(16)).join('');
 
 // --- AES Functions ---
 function hexToArrayBuffer(hex) {
@@ -127,7 +131,7 @@ socket.on("chat message", async (data) => {
 
 // Add message to chat display
 function addMessageToChat(sender, message, isSender) {
-  alert("Message received: " + message);
+
   const msgDiv = document.createElement("div");
   msgDiv.classList.add("message", isSender ? "message-right" : "message-left");
   msgDiv.innerHTML = `<strong>${sender}</strong>: ${message}`;
