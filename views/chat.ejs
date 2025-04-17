@@ -9,34 +9,35 @@
 
 <!-- Chat Box Section -->
 <section class="chat-container">
-    <div class="chat-box">
-        <div class="chat-header">
-            <h2>Chat Room</h2>
-        </div>
-
-        <!-- Hidden Username -->
-        <input type="text" id="username" value="<%= user.username %>" hidden />
-
-        <!-- Recipient Selection -->
-        <div class="chat-users">
-            <label for="recipient">Select a Friend:</label>
-            <select id="recipient">
-                <option value="" disabled selected>Choose a contact</option>
-                <% friends.forEach(friend => { %>
-                    <option value="<%= friend.username %>"><%= friend.username %></option>
-                <% }); %>
-            </select>
-        </div>
-
-        <!-- Messages Display -->
-        <div id="messages" class="chat-messages"></div>
-
-        <!-- Message Input -->
-        <div class="chat-input-area">
-            <input type="text" id="message" placeholder="Type a message..." />
-            <button id="sendBtn">➤</button>
-        </div>
+  <div class="chat-box">
+    <div class="chat-header">
+      <h2>Chat Room</h2>
+     
     </div>
+
+    <!-- Hidden Username -->
+    <input type="text" id="username" value="<%= user.username %>" hidden />
+
+    <!-- Recipient Selection -->
+    <div class="chat-users">
+      <label for="recipient">Select a Friend:</label>
+      <select id="recipient">
+        <option value="" disabled selected>Choose a contact</option>
+        <% friends.forEach(friend => { %>
+          <option value="<%= friend.username %>"><%= friend.username %></option>
+        <% }); %>
+      </select>
+    </div>
+
+    <!-- Messages Display -->
+    <div id="messages" class="chat-messages"></div>
+
+    <!-- Message Input -->
+    <div class="chat-input-area">
+      <input type="text" id="message" placeholder="Type a message..." />
+      <button id="sendBtn" class="btn">Send</button>
+    </div>
+  </div>
 </section>
 
 <!-- Scripts -->

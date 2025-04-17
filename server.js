@@ -41,6 +41,9 @@ const http = require("http");
 const sharedSession = require("express-socket.io-session");
 
 // const crypto = require("crypto");
+
+const helmet = require("helmet");
+
 const { webcrypto } = require("crypto");
 // const fs = require("fs").promises; // Using promises for async file operations
 
@@ -95,7 +98,18 @@ const io = new Server(server, {
   },
 });
 
+// app.use(helmet());
 
+// app.use(
+//     helmet.contentSecurityPolicy({
+//       directives: {
+//         defaultSrc: ["'self'"],
+//         scriptSrc: ["'self"],
+//         objectSrc: ["'none'"],
+//         upgradeInsecureRequests: [],
+//       },
+//     })
+//   );
 
 mongoose.connect(DBSERVER)
   .then(() => console.log('Connected to MongoDB'))
@@ -168,7 +182,7 @@ const sessionMiddleware = session({
 
 // Ensure proper ordering of middleware
 app.use(sessionMiddleware);
-app.use(express.json());
+// app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
@@ -298,6 +312,26 @@ const upload = multer({
 
 
 
+
+function logXSSAttempt(userInput, req) {
+    console.log("Checking for XSS attempts...");    
+    const suspicious = /<script.*?>|on\w+=|javascript:/i;
+    if (suspicious.test(userInput)) {
+                const logEntry = `[${new Date().toISOString()}] Suspected XSS Attempt:
+        IP: ${req.ip}
+        Path: ${req.originalUrl}
+        User-Agent: ${req.headers['user-agent']}
+        Input: ${userInput}
+
+        `;
+
+        fs.appendFileSync(path.join(__dirname, 'attackers.log'), logEntry, 'utf8');
+        console.warn("  XSS attempt detected and logged!");
+    }
+}
+
+
+
 // Configure Winston logger
 // Create a Winston logger
 const logger = winston.createLogger({
@@ -341,6 +375,13 @@ console.debug = (...args) => {
 
 
 
+app.use((req, res, next) => {
+    if (req.method === "POST" && req.body) {
+        const flatInputs = JSON.stringify(req.body);
+        logXSSAttempt(flatInputs, req);
+    }
+    next();
+});
 
 // Middleware to check if the user is an admin
 function isAdmin(req, res, next) {
@@ -1632,9 +1673,46 @@ app.get("/admin-login", function (req, res) {
 
 });
 
+
+
+//  Step 3: Verify OTP
+const attemptTracker = {}; // Structure: { email: { count, lastAttempt, blockedUntil } }
+
+const MAX_ATTEMPTS = 2;
+const BLOCK_DURATION_MS = 10 * 60 * 1000; // 10 minutes block
+const ATTEMPT_WINDOW_MS = 5 * 60 * 1000;
+
 //  Step 2: Generate and send OTP
 app.post("/send-otp", (req, res) => {
     const { email } = req.body;
+
+
+    if (!attemptTracker[email]) {
+        attemptTracker[email] = { count: 0, lastAttempt: Date.now(), blockedUntil: null };
+    }
+
+    const tracker = attemptTracker[email];
+    const now = Date.now();
+
+    // Handle block
+    if (tracker.blockedUntil && now < tracker.blockedUntil) {
+        return res.status(429).send("Too many attempts. Try again later.");
+    }
+
+    // Reset count if window passed
+    if (now - tracker.lastAttempt > ATTEMPT_WINDOW_MS) {
+        tracker.count = 0;
+    }
+    console.log("Current attempt count:", tracker.count);
+
+    tracker.lastAttempt = now;
+    tracker.count++;
+    if (tracker.count >= MAX_ATTEMPTS) {
+        tracker.blockedUntil = now + BLOCK_DURATION_MS;
+        console.warn(`Too many attempts for ${email}. Blocking for 10 mins.`);
+    }
+
+
     console.log("Sending OTP to:", email, GMAIL, GMAIL_PASSWORD);
     const otp = crypto.randomInt(100000, 999999); // Generate a 6-digit OTP
 
@@ -1670,19 +1748,46 @@ app.post("/send-otp", (req, res) => {
         }
 
         res.send(`
-            <h2>Verify Your Email</h2>
-            <form action="/verify-otp" method="POST">
+           <h2>Verify Your Email</h2>
+            <form id="otp-form" action="/verify-otp" method="POST">
                 <input type="hidden" name="email" value="${email}" />
-                <input type="text" name="otp" placeholder="Enter OTP" required />
-                <button type="submit">Verify</button>
+                <input type="text" name="otp" placeholder="Enter OTP" required pattern="\\d{6}" />
+                <button type="submit" id="submit-btn">Verify</button>
             </form>
+
+            <script>
+                const form = document.getElementById("otp-form");
+                const submitBtn = document.getElementById("submit-btn");
+
+                form.addEventListener("submit", function () {
+                    // Prevent DoS by disabling the button after submission
+                    submitBtn.disabled = true;
+                    submitBtn.innerText = "Verifying...";
+
+                    // Re-enable after delay (optional: just for UX reset)
+                    setTimeout(() => {
+                        submitBtn.disabled = false;
+                        submitBtn.innerText = "Verify";
+                    }, 5000); // Disable for 5 seconds
+                });
+            </script>
         `);
     });
 });
 
-//  Step 3: Verify OTP
+
+
+
+
 app.post("/verify-otp", (req, res) => {
     const { email, otp } = req.body;
+    // const { email, otp } = req.body;
+
+    // Initialize tracker for this email
+
+
+    
+
 
     if (otpStorage[email] && otpStorage[email] == otp) {
         const ip = req.headers["x-forwarded-for"] || req.socket.remoteAddress;
@@ -1850,7 +1955,12 @@ app.get("/verifyemail", async function(req, res) {
     console.log("Sending OTP to:", email, GMAIL, GMAIL_PASSWORD);
     const otp = crypto.randomInt(100000, 999999); // Generate a 6-digit OTP
 
-    otpStorage[email] = otp; // Store OTP temporarily
+    otpStorage[email] = {
+        code: generatedOtp, // e.g. "123456"
+        expiresAt: Date.now() + 5 * 60 * 1000, // 5 minutes
+        attempts: 0, // initial attempt count
+        maxAttempts: 5 // limit
+    }; // Store OTP temporarily
 
     const mailOptions = {
         from: GMAIL,
@@ -1944,13 +2054,171 @@ app.get("*", function (req, res) {
 
 
 
+// Helper: Promisify QR code generation
+function generateQRCodeAsync(url) {
+    return new Promise((resolve, reject) => {
+        QRCode.toDataURL(url, (err, data) => {
+            if (err) return reject(err);
+            resolve(data);
+        });
+    });
+}
+
+app.post("/login", async function (req, res) {
+    if (req.session.user) {
+        return res.redirect("/profile");
+    }
+
+    console.log("Login Request:", req.body);
+
+    try {
+        const user = await Users.findOne({ mobile_number: req.body.mobile_number });
+
+        if (!user) {
+            console.log("No user found with this mobile number");
+            return res.redirect("/login");
+        }
+
+        const isMatch = await bcrypt.compare(req.body.password, user.password_hash);
+        if (!isMatch) {
+            console.log("Incorrect password");
+            return res.render("login");
+        }
+
+        if (user.is_suspended) {
+            return res.send("You have been suspended. Please contact support.");
+        }
+
+        // Handle TOTP Setup
+        if (!user.totp_secret) {
+            const totpSecret = speakeasy.generateSecret({ length: 20 });
+            const otpauth_url = totpSecret.otpauth_url;
+
+            try {
+                const qrCodeDataURL = await generateQRCodeAsync(otpauth_url);
+
+                // Save the secret to the user (optional: only after verification)
+                user.totp_secret = totpSecret.base32;
+                await user.save();
+
+                return res.send(`
+                    <!DOCTYPE html>
+                    <html lang="en">
+                    <head>
+                        <meta charset="UTF-8">
+                        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                        <title>🔐 TOTP Verification</title>
+                        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+                        <style>
+                            body {
+                                background-color: #f4f4f4;
+                                display: flex;
+                                justify-content: center;
+                                align-items: center;
+                                height: 100vh;
+                                text-align: center;
+                            }
+                            .container {
+                                background: white;
+                                padding: 30px;
+                                border-radius: 10px;
+                                box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+                                max-width: 400px;
+                                width: 100%;
+                            }
+                            img {
+                                margin: 20px 0;
+                                width: 200px;
+                                height: 200px;
+                            }
+                            input, button {
+                                width: 100%;
+                                padding: 10px;
+                                margin: 10px 0;
+                                border-radius: 5px;
+                                font-size: 16px;
+                            }
+                            button {
+                                background-color: #007bff;
+                                color: white;
+                                border: none;
+                                cursor: pointer;
+                            }
+                            button:hover {
+                                background-color: #0056b3;
+                            }
+                        </style>
+                    </head>
+                    <body>
+                        <div class="container">
+                            <h2>🔒 Scan & Verify</h2>
+                            <p>Scan this QR Code with Google Authenticator</p>
+                            <img src="${qrCodeDataURL}" alt="TOTP QR Code">
+                            <p>Then enter the 6-digit code from the app.</p>
+                            <form action="/verify-totp" method="POST">
+                                <input type="hidden" name="mobile_number" value="${req.body.mobile_number}">
+                                <label for="totp_token">Enter TOTP Code:</label>
+                                <input type="text" name="totp_token" pattern="\\d{6}" required placeholder="123456">
+                                <button type="submit">Verify</button>
+                            </form>
+                        </div>
+                    </body>
+                    </html>
+                `);
+            } catch (err) {
+                console.error("QR Code Generation Error:", err);
+                return res.status(500).json({ error: "Failed to generate QR Code" });
+            }
+        }
+
+        // Check Email Verification
+        if (!user.email_verified) {
+            req.session.email = user.email;
+            console.log("Email not verified");
+            return res.redirect("/verifyemail");
+        }
+
+        // Generate keys if missing
+        if (!user.public_key || !user.encrypted_private_key) {
+            console.log("Generating new cryptographic keys for user...");
+            const { publicKey, privateKey } = generateRSAKeyPair();
+            const aesKey = generateAESKey();
+            const encryptedAESKey = encryptAESKey(publicKey, aesKey).toString("hex");
+            const { encryptedData: encryptedPrivateKey, iv: ivPrivateKey } = encryptWithAES(aesKey, privateKey);
+
+            user.public_key = publicKey;
+            user.encrypted_private_key = JSON.stringify({ data: encryptedPrivateKey, iv: ivPrivateKey });
+            user.encrypted_aes_key = encryptedAESKey;
+
+            await user.save();
+            console.log("Keys generated and stored successfully.");
+        }
+
+        // Save session and proceed
+        req.session.user = user;
+
+        totpMiddleware(req, res, function () {
+            delete req.session.totp_verified;
+            return res.redirect("/profile");
+        });
+
+    } catch (err) {
+        console.error("Login Error:", err);
+        res.render("login");
+    }
+});
+
+
+
+
+
 
 app.post("/register", upload.single("profile_picture"), formVailidation, async function (req, res) {
     if (req.session.user) {
         return res.redirect("/profile");
     }
     if (!req.file) {
-        return res.render("register");
+        return res.status(500).json({ error: "Registration failed : nO file" });
     }
 
     try {
@@ -2158,8 +2426,9 @@ app.post("/verify-totp", async function (req, res) {
 // Email Verification Route
 app.post("/verifyemail", async (req, res) => {
     const { email, otp } = req.body;
-    console.log("Email Verification Request:", email, otp, otpStorage[email]);
+    const storedOtpData = otpStorage[email];
 
+    console.log("Email Verification Request:", email, otp, storedOtpData);
 
     try {
         const user = await Users.findOne({ email });
@@ -2168,16 +2437,36 @@ app.post("/verifyemail", async (req, res) => {
             return res.status(400).json({ error: "User not found." });
         }
 
-        if (!otpStorage[email] || otpStorage[email] != otp) {
-            return res.status(400).json({ error: "Incorrect OTP." });
+        // No OTP found
+        if (!storedOtpData) {
+            return res.status(400).json({ error: "OTP not found or expired." });
         }
 
-        // Mark email as verified
+        // Check if OTP is expired
+        if (Date.now() > storedOtpData.expiresAt) {
+            delete otpStorage[email];
+            return res.status(400).json({ error: "OTP has expired. Please request a new one." });
+        }
+
+        // Check attempt limit
+        if (storedOtpData.attempts >= storedOtpData.maxAttempts) {
+            delete otpStorage[email];
+            return res.status(429).json({ error: "Too many incorrect attempts. OTP invalidated." });
+        }
+
+        // Check if OTP matches
+        if (storedOtpData.code !== otp) {
+            storedOtpData.attempts += 1;
+            return res.status(400).json({
+                error: `Incorrect OTP. ${storedOtpData.maxAttempts - storedOtpData.attempts} attempts left.`,
+            });
+        }
+
+        // OTP correct
         user.email_verified = true;
         await user.save();
 
-        // Remove OTP from storage after successful verification
-        delete otpStorage[email];
+        delete otpStorage[email]; // Clear on success
 
         return res.redirect("/login");
 
@@ -2195,152 +2484,161 @@ app.post("/verifyemail", async (req, res) => {
 
 
 
+// app.post("/login", async function(req, res) {
+//     if (req.session.user) {
+//         return res.redirect("/profile");
+//     }
+//     console.log("Login Request:", req.body);
 
 
-app.post("/login", async function(req, res) {
-    if (req.session.user) {
-        return res.redirect("/profile");
-    }
-    console.log("Login Request:", req.body);
 
-    try {
-        // Find user by mobile number
-        const user = await Users.findOne({ mobile_number: req.body.mobile_number });
-
-        if (!user) {
-            console.log("No user found with this mobile number");
-            return res.redirect("/login");
-        }
+//     try {
+//         // Find user by mobile number
+//         const user = await Users.findOne({ mobile_number: req.body.mobile_number });
 
 
-        // Unable Once Your Accoundt Have been Revoked
-        if(user.email_verified == false){
-            req.session.email = user.email;
-            console.log("Email not verified");
-            return res.redirect("/verifyemail");
-            };       
-            
-            if(user.is_suspended == true){
-                return res.send("You have been suspended. Please contact support. hihahah");
-                };
-        const totpSecret = speakeasy.generateSecret({ length: 20 });
-        if(!user.totp_secret){        
-            const otpauth_url = totpSecret.otpauth_url;
-            QRCode.toDataURL(otpauth_url, function (err, qrCodeDataURL) {
-                if (err) {
-                    console.error("QR Code Generation Error:", err);
-                    return res.status(500).json({ error: "Failed to generate QR Code" });
-                }
-                // Render a page with the QR code
-                res.send(`
-                    <!DOCTYPE html>
-                    <html lang="en">
-                    <head>
-                        <meta charset="UTF-8">
-                        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                        <title>🔐 TOTP Verification</title>
-                        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
-                        <style>
-                            body {
-                                background-color: #f4f4f4;
-                                display: flex;
-                                justify-content: center;
-                                align-items: center;
-                                height: 100vh;
-                                text-align: center;
-                            }
-                            .container {
-                                background: white;
-                                padding: 30px;
-                                border-radius: 10px;
-                                box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
-                                max-width: 400px;
-                                width: 100%;
-                            }
-                            img {
-                                margin: 20px 0;
-                                width: 200px;
-                                height: 200px;
-                            }
-                            input {
-                                width: 100%;
-                                padding: 10px;
-                                margin: 10px 0;
-                                border-radius: 5px;
-                                border: 1px solid #ddd;
-                                font-size: 16px;
-                                text-align: center;
-                            }
-                            button {
-                                width: 100%;
-                                padding: 10px;
-                                background-color: #007bff;
-                                color: white;
-                                border: none;
-                                font-size: 16px;
-                                border-radius: 5px;
-                                cursor: pointer;
-                                transition: 0.3s ease;
-                            }
-                            button:hover {
-                                background-color: #0056b3;
-                            }
-                        </style>
-                    </head>
-                    <body>
-                        <div class="container">
-                            <h2>🔒 Scan & Verify</h2>
-                            <p>Scan this QR Code with Google Authenticator</p>
-                            <img src="${qrCodeDataURL}" alt="TOTP QR Code">
-                            <p>Once scanned, enter the 6-digit code from your app.</p>
 
-                            <form action="/verify-totp" method="POST">
-                                <input type="hidden" name="mobile_number" value="${req.body.mobile_number}">
-                                <label for="totp_token">Enter TOTP Code:</label>
-                                <input type="text" name="totp_token" pattern="\\d{6}" title="6-digit TOTP Code" required placeholder="123456">
-                                <button type="submit">Verify</button>
-                            </form>
-                        </div>
-                    </body>
-                    </html>
-                `);
-            });
-        }
+//         if (!user) {
+//             console.log("No user found with this mobile number");
+//             return res.redirect("/login");
+//         }
 
-        // Compare provided password with stored hash
-        const isMatch = await bcrypt.compare(req.body.password, user.password_hash);
-        if (!isMatch) {
-            console.log("Incorrect password");
-            return res.render("login");
-        }
-        console.log("User authenticated");
+//         const isMatch = await bcrypt.compare(req.body.password, user.password_hash);
+//         if (!isMatch) {
+//             console.log("Incorrect password");
+//             return res.render("login");
+//         }
 
-        if (!user.public_key || !user.encrypted_private_key) {
-            console.log("Generating new cryptographic keys for user...");
-            const { publicKey, privateKey } = generateRSAKeyPair();
-            const aesKey = generateAESKey();
-            const encryptedAESKey = encryptAESKey(publicKey, aesKey).toString("hex");
-            const { encryptedData: encryptedPrivateKey, iv: ivPrivateKey } = encryptWithAES(aesKey, privateKey);
-            user.public_key = publicKey;
-            user.encrypted_private_key = JSON.stringify({ data: encryptedPrivateKey, iv: ivPrivateKey });
-            user.encrypted_aes_key = encryptedAESKey;
+
+//         if(user.is_suspended == true){
+//             return res.send("You have been suspended. Please contact support. hihahah");
+//             };
+
+
+
+//         // Unable Once Your Accoundt Have been Revoked
+
+
+//         const totpSecret = await speakeasy.generateSecret({ length: 20 });
+//         if(!user.totp_secret){        
+//             const otpauth_url = totpSecret.otpauth_url;
+//             QRCode.toDataURL(otpauth_url, await function (err, qrCodeDataURL) {
+//                 if (err) {
+//                     console.error("QR Code Generation Error:", err);
+//                     return res.status(500).json({ error: "Failed to generate QR Code" });
+//                 }
+//                 // Render a page with the QR code
+//                 res.send(`
+//                     <!DOCTYPE html>
+//                     <html lang="en">
+//                     <head>
+//                         <meta charset="UTF-8">
+//                         <meta name="viewport" content="width=device-width, initial-scale=1.0">
+//                         <title>🔐 TOTP Verification</title>
+//                         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+//                         <style>
+//                             body {
+//                                 background-color: #f4f4f4;
+//                                 display: flex;
+//                                 justify-content: center;
+//                                 align-items: center;
+//                                 height: 100vh;
+//                                 text-align: center;
+//                             }
+//                             .container {
+//                                 background: white;
+//                                 padding: 30px;
+//                                 border-radius: 10px;
+//                                 box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+//                                 max-width: 400px;
+//                                 width: 100%;
+//                             }
+//                             img {
+//                                 margin: 20px 0;
+//                                 width: 200px;
+//                                 height: 200px;
+//                             }
+//                             input {
+//                                 width: 100%;
+//                                 padding: 10px;
+//                                 margin: 10px 0;
+//                                 border-radius: 5px;
+//                                 border: 1px solid #ddd;
+//                                 font-size: 16px;
+//                                 text-align: center;
+//                             }
+//                             button {
+//                                 width: 100%;
+//                                 padding: 10px;
+//                                 background-color: #007bff;
+//                                 color: white;
+//                                 border: none;
+//                                 font-size: 16px;
+//                                 border-radius: 5px;
+//                                 cursor: pointer;
+//                                 transition: 0.3s ease;
+//                             }
+//                             button:hover {
+//                                 background-color: #0056b3;
+//                             }
+//                         </style>
+//                     </head>
+//                     <body>
+//                         <div class="container">
+//                             <h2>🔒 Scan & Verify</h2>
+//                             <p>Scan this QR Code with Google Authenticator</p>
+//                             <img src="${qrCodeDataURL}" alt="TOTP QR Code">
+//                             <p>Once scanned, enter the 6-digit code from your app.</p>
+
+//                             <form action="/verify-totp" method="POST">
+//                                 <input type="hidden" name="mobile_number" value="${req.body.mobile_number}">
+//                                 <label for="totp_token">Enter TOTP Code:</label>
+//                                 <input type="text" name="totp_token" pattern="\\d{6}" title="6-digit TOTP Code" required placeholder="123456">
+//                                 <button type="submit">Verify</button>
+//                             </form>
+//                         </div>
+//                     </body>
+//                     </html>
+//                 `);
+//             });
+//         }
+//         if(user.email_verified == false){
+//             req.session.email = user.email;
+//             console.log("Email not verified");
+//             return res.redirect("/verifyemail");
+//             };
+        
+
+//         // Compare provided password with stored hash
+
+//         console.log("User authenticated");
+
+//         if (!user.public_key || !user.encrypted_private_key) {
+//             console.log("Generating new cryptographic keys for user...");
+//             const { publicKey, privateKey } = generateRSAKeyPair();
+//             const aesKey = generateAESKey();
+//             const encryptedAESKey = encryptAESKey(publicKey, aesKey).toString("hex");
+//             const { encryptedData: encryptedPrivateKey, iv: ivPrivateKey } = encryptWithAES(aesKey, privateKey);
+//             user.public_key = publicKey;
+//             user.encrypted_private_key = JSON.stringify({ data: encryptedPrivateKey, iv: ivPrivateKey });
+//             user.encrypted_aes_key = encryptedAESKey;
     
-            await user.save();
-            console.log("Keys generated and stored successfully.");
-        }
+//             await user.save();
+//             console.log("Keys generated and stored successfully.");
+//         }
 
-        req.session.user = user;
-        totpMiddleware(req, res, function () {
+//         req.session.user = user;
+//         totpMiddleware(req, res, function () {
            
-            delete req.session.totp_verified; // Clear session variable
-            res.redirect("/profile");
-        });
+//             delete req.session.totp_verified; // Clear session variable
+//             res.redirect("/profile");
+//         });
 
-    } catch (err) {
-        console.error("Login Error:", err);
-        res.render("login");
-    }
-});
+//     } catch (err) {
+//         console.error("Login Error:", err);
+//         res.render("login");
+//     }
+// });
 
 
 
@@ -2698,22 +2996,60 @@ function checkForLogin(req,res,next)
 
 
 
-function formVailidation(req, res, next) {
+const allowedEmailDomains = [
+    "gmail.com",
+    "yahoo.com",
+    "outlook.com",
+    "hotmail.com",
+    "live.com",
+    "iiitd.ac.in"
+  ];
+  
+  function formVailidation(req, res, next) {
     const { username, name, email, mobile_number, password } = req.body;
-
-    if (username &&
-        emailValidation(email) &&
-        passwordValidation(password) &&
-        contactValidation(mobile_number) &&
-        nameValidation(name)
-    ) {
-        return next();
-    } else {
-        console.log(" Form Validation Failed!");
-        return res.status(400).send("Form validation failed! Please follow the required format and try again.");
+  
+    // Username
+    if (!username || username.trim().length < 3) {
+      return res.status(400).json({
+        field: "username",
+        error: "Username is required and should be at least 3 characters."
+      });
     }
-}
-
+  
+    // Name
+    if (!nameValidation(name)) {
+      return res.status(400).json({
+        field: "name",
+        error: "Name must contain only alphabets and allowed special characters (e.g., apostrophes, hyphens, dots)."
+      });
+    }
+  
+    // Email
+    if (!emailValidation(email)) {
+      return res.status(400).json({
+        field: "email",
+        error: `Invalid email format or domain not allowed. Accepted domains: ${allowedEmailDomains.join(", ")}`
+      });
+    }
+  
+    // Mobile Number
+    if (!contactValidation(mobile_number)) {
+      return res.status(400).json({
+        field: "mobile_number",
+        error: "Mobile number must be exactly 10 digits and start with digits 1-9."
+      });
+    }
+  
+    // Password
+    if (!passwordValidation(password)) {
+      return res.status(400).json({
+        field: "password",
+        error: "Password must be at least 8 characters, include an uppercase letter, lowercase letter, a number, and a special character."
+      });
+    }
+  
+    next();
+  }
 //  Name Validation (Only alphabets & some special characters like apostrophes)
 function nameValidation(name) {
     console.log("Validating Name:", name);
@@ -2726,17 +3062,14 @@ function nameValidation(name) {
     }
 }
 
-//  Email Validation (Standard email format)
 function emailValidation(email) {
     console.log("Validating Email:", email);
-    const emailRegex = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
-    if (emailRegex.test(email)) {
-        return true;
-    } else {
-        console.log(" Email validation failed.");
-        return false;
-    }
-}
+    const emailParts = email.split("@");
+    if (emailParts.length !== 2) return false;
+    const domain = emailParts[1].toLowerCase();
+    return allowedEmailDomains.includes(domain);
+  }
+
 
 //  Password Validation (At least 8 chars, one uppercase, one lowercase, one number, one special character)
 function passwordValidation(password) {
@@ -2775,15 +3108,6 @@ async function createHash(password) {
 
 
 // Fake OTP verification
-app.post("/verify-otp", (req, res) => {
-    const { email, otp } = req.body;
-    
-    res.send(`
-        <h2>You've been compromised!</h2>
-        <p>Your details have been logged and reported.</p>
-    `);
-});
-
 
 
 function sendAlert(email, ip, geo) {
@@ -2991,6 +3315,12 @@ async function saveMediaDetails(req, file, fileType) {
 // app.listen(PORT, () => {
 //     console.log('serever is live at  port  no: %s', PORT )
 // });
+
+
+app.post("*", async (req, res) => {
+    res.status(500).send("hehehehhehe");
+    
+} );
 
 server.listen(PORT, () => {
     console.log('serever is live at  port  no: %s', PORT )

@@ -1,72 +1,118 @@
-
-
-
-
 <%- include('parcials/before_import') %>
-<!-- <link rel="stylesheet" href="/css/search.css" /> -->
-
-<!-- locomotive-scroll -->
-<!-- <link
-    rel="stylesheet"
-    href="https://cdn.jsdelivr.net/npm/locomotive-scroll@3.2.5/dist/locomotive-scroll.min.css"
-/> -->
 <link rel="stylesheet" href="css/login.css">
-
-<!-- <script src="https://cdn.jsdelivr.net/npm/locomotive-scroll@3.2.5/dist/locomotive-scroll.min.js"></script> -->
 <%- include('parcials/after_import') %>
-
 <%- include('parcials/nav') %>
 
-
-
-    <div class="margin-top-1">
-        <div class="box-form ">
-            <div class="left">
-                <div class="overlayy">
+<div class="margin-top-1">
+    <div class="box-form">
+        <div class="left">
+            <div class="overlayy">
                 <h1>Hello There.</h1>
-                <p>It will take onely few seconds of your precious time for registration.</p>
+                <p>It will take only a few seconds of your precious time for registration.</p>
                 <span>
                     <p>Our social media</p>
-                    <a href="https://www.instagram.com/reel/CcGJHGOgANo/?igsh=MWxhOXZiMGh4emU4Yg=="><i class="fa fa-facebook" aria-hidden="true"></i>instagram</a>
-                    <a href="https://www.instagram.com/reel/CcGJHGOgANo/?igsh=MWxhOXZiMGh4emU4Yg=="><i class="fa fa-twitter" aria-hidden="true"></i> Twitter</a>
+                    <a href="#"><i class="fa fa-facebook" aria-hidden="true"></i> Instagram</a>
+                    <a href="#"><i class="fa fa-twitter" aria-hidden="true"></i> Twitter</a>
                 </span>
-                </div>
             </div>
-            
-            
-                <div class="right">
-                <!-- <h5>Login</h5> -->
-                <p>Already a memeber <a href="/login">Login</a> here.</p>
-    
+        </div>
 
-                <form action="/register" method="post" enctype="multipart/form-data">
-                    <div class="inputs">
-                        <input type="text" name="username" placeholder="User Name" required>
-                        <input type="text" name="name" placeholder="Name" required>
-                        <input type="text" name="mobile_number" placeholder="Contact Number" required>
-                        <input type="email" name="email" placeholder="example@gmail.com" required>
-                        <input type="text" name="bio" placeholder="Bio">
-                        <input type="password" name="password" placeholder="Password" required>
-                        <input type="password" name="confirm_password" placeholder="Confirm Password" required>
-                        <input type="file" name="profile_picture" accept="image/*">
-                        <div class="remember-me--forget-password">
-                            <p>forget password?</p>
-                        </div>
-                        <br>
-                        <button type="submit">Register</button>
+        <div class="right">
+            <p>Already a member? <a href="/login">Login</a> here.</p>
+
+            <form action="/register" method="post" enctype="multipart/form-data" id="registerForm" novalidate>
+                <div class="inputs">
+                    <input type="text" name="username" placeholder="User Name" required>
+
+                    <input type="text" name="name" placeholder="Name" id="name" required>
+                    <small class="error" id="nameError"></small>
+
+                    <input type="text" name="mobile_number" placeholder="Contact Number" id="mobile" required>
+                    <small class="error" id="mobileError"></small>
+
+                    <input type="email" name="email" placeholder="example@gmail.com" id="email" required>
+                    <small class="error" id="emailError"></small>
+
+                    <input type="text" name="bio" placeholder="Bio">
+
+                    <input type="password" name="password" placeholder="Password" id="password" required>
+                    <small class="error" id="passwordError"></small>
+
+                    <input type="password" name="confirm_password" placeholder="Confirm Password" id="confirm_password" required>
+                    <small class="error" id="confirmPasswordError"></small>
+
+                    <input type="file" name="profile_picture" accept="image/*">
+
+                    <div class="remember-me--forget-password">
+                        <p>Forgot password?</p>
                     </div>
-                </form>
-
-
-            </div>
-            
+                    <br>
+                    <button type="submit">Register</button>
+                </div>
+            </form>
         </div>
     </div>
+</div>
 
-    <!-- <div class="margin-top-1"></div> -->
+<style>
+    .error {
+        color: red;
+        font-size: 0.85em;
+        margin-top: -8px;
+        margin-bottom: 10px;
+        display: block;
+    }
+</style>
+
+<script>
+    const form = document.getElementById("registerForm");
+
+    form.addEventListener("submit", function (e) {
+        let valid = true;
+
+        // Clear old errors
+        document.querySelectorAll('.error').forEach(el => el.textContent = '');
+
+        // Name validation
+        const name = document.getElementById("name").value.trim();
+        const nameRegex = /^[A-Za-z][A-Za-z\s\.\'\-]*$/;
+        if (!nameRegex.test(name)) {
+            document.getElementById("nameError").textContent = "Only letters, spaces, hyphens, apostrophes, and periods allowed.";
+            valid = false;
+        }
+
+        // Mobile validation
+        const mobile = document.getElementById("mobile").value.trim();
+        const mobileRegex = /^[1-9]\d{9}$/;
+        if (!mobileRegex.test(mobile)) {
+            document.getElementById("mobileError").textContent = "Mobile must be 10 digits and not start with 0.";
+            valid = false;
+        }
+
+        // Email validation
+        const email = document.getElementById("email").value.trim();
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            document.getElementById("emailError").textContent = "Enter a valid email (e.g. example@mail.com).";
+            valid = false;
+        }
+
+        // Password validation
+        const password = document.getElementById("password").value;
+        const confirmPassword = document.getElementById("confirm_password").value;
+        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*]).{8,}$/;
+        if (!passwordRegex.test(password)) {
+            document.getElementById("passwordError").textContent = "Password must be 8+ chars, include upper, lower, number, and special char.";
+            valid = false;
+        }
+
+        if (password !== confirmPassword) {
+            document.getElementById("confirmPasswordError").textContent = "Passwords do not match.";
+            valid = false;
+        }
+
+        if (!valid) e.preventDefault();
+    });
+</script>
+
 <%- include('parcials/footer') %>
-
-
-
-
-
