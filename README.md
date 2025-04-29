@@ -1,9 +1,6 @@
 ![Man This Sucks](https://media.tenor.com/WO6GwQWJRhkAAAAM/user-password.gif)
 
 
-Here’s your README.md file formatted properly for GitHub:
-
-⸻
 
 🚀 Node.js Express Startup Guide
 

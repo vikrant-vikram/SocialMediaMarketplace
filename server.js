@@ -411,7 +411,7 @@ app.use(cors());
 //     // User joins a one-on-one chat
 //     socket.on("join", async ({ username, withUser }) => {
 //       socket.join(username);
-//       console.log(`📥 ${username} joined chat with ${withUser}`);
+//       console.log(` ${username} joined chat with ${withUser}`);
   
 //       const messages = await Message.find({
 //         $or: [
@@ -493,7 +493,7 @@ io.on("connection", (socket) => {
 
     // Handle chat messages
     socket.on("chat message", async (data) => {
-        console.log("📩 New message received:", data);
+        console.log(" New message received:", data);
         const session = socket.request.session;
 
         let { sender, recipient, encryptedMessage, iv } = data;
@@ -970,7 +970,7 @@ app.get("/accept/follow/:username", isLoggedIn, async (req, res) => {
 
         console.log(`Accepting follow request from ${username} for user ${currentUserId}`);
 
-        // 2. Find the requesting user (Use correct model reference: "User" instead of "Users")
+
         const requestingUser = await Users.findOne({ username }).select('_id');
         if (!requestingUser) {
             console.error('Requesting user not found:', username);
@@ -980,7 +980,7 @@ app.get("/accept/follow/:username", isLoggedIn, async (req, res) => {
         // 3. Verify the pending request exists (Ensure IDs are `ObjectId`)
         const existingRequest = await Friendship.findOne({
             user_id: new mongoose.Types.ObjectId(requestingUser._id),  // Ensure it's ObjectId
-            friend_id_or_follow_id: new mongoose.Types.ObjectId(currentUserId), // Ensure it's ObjectId
+            friend_id_or_follow_id: currentUserId, // Ensure it's ObjectId
             status: 'Pending'
         });
 
@@ -1848,7 +1848,7 @@ app.post("/verify-otp", (req, res) => {
                 <p style="text-align: center; font-size: 14px; color: #777;">
                     🔐 Stay Secure, Stay Smart.<br>
                     <strong>Social Media Marketplace – Cybersecurity Division</strong><br>
-                    📩 Contact us: <a href="mailtorandomcollegemail@iiitd.ac.in" style="color: #3498DB;">randomcollegemail@iiitd.ac.in</a>
+                     Contact us: <a href="mailtorandomcollegemail@iiitd.ac.in" style="color: #3498DB;">randomcollegemail@iiitd.ac.in</a>
                 </p>
             </div>`,
             attachments: [
@@ -1919,27 +1919,116 @@ app.get('/admin/logs', isAdmin, (req, res) => {
     }
 });
 
+// app.get('/admin/attacker-logs', isAdmin, (req, res) => {
+//     try {
+//         // Read logs from the file
+//         const logs = fs.readFileSync(path.join(__dirname, 'attackers.log'), 'utf-8');
+//         res.json({ success: true, logs });
+//     } catch (error) {
+//         logger.error('Error reading logs:', error); // Log the error
+//         res.status(500).json({ success: false, message: 'Failed to fetch logs' });
+//     }
+// });
+
+
+
+app.get('/.env', isAdmin, (req, res) => {
+    res.json({
+        
+        "ssh_username": "root",
+        "ssh_password": "sfdSDF$#%#",
+        "apiKey": "abcd1234efgh5678",
+        PORT: 3120,
+        MONGO_URI: "mongodb://localhost:27017/marketplace",
+
+     });
+}
+);
+   
+
+
 app.get('/admin/attacker-logs', isAdmin, (req, res) => {
     try {
         // Read logs from the file
         const logs = fs.readFileSync(path.join(__dirname, 'attackers.log'), 'utf-8');
-        res.json({ success: true, logs });
+
+        // Split logs by '-----------------------------' to separate each entry
+        const logEntries = logs.split('-----------------------------');
+
+        // Create HTML content for display
+        let logHTML = `
+            <html>
+            <head>
+                <title>Admin Attack Logs</title>
+                <style>
+                    body {
+                        font-family: Arial, sans-serif;
+                        margin: 0;
+                        padding: 20px;
+                        background-color: #f4f4f4;
+                    }
+                    h1 {
+                        text-align: center;
+                        color: #333;
+                    }
+                    .log-entry {
+                        background-color: #fff;
+                        padding: 15px;
+                        margin-bottom: 20px;
+                        border-radius: 8px;
+                        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+                    }
+                    .log-entry h3 {
+                        color: #E74C3C;
+                        margin: 0;
+                    }
+                    .log-entry p {
+                        color: #555;
+                        font-size: 14px;
+                        margin: 5px 0;
+                    }
+                    .log-entry .time {
+                        font-weight: bold;
+                    }
+                    .log-entry .ip,
+                    .log-entry .location,
+                    .log-entry .user-agent,
+                    .log-entry .email {
+                        font-style: italic;
+                    }
+                </style>
+            </head>
+            <body>
+                <h1>Attack Logs</h1>
+        `;
+
+        // Format each log entry into a structured HTML block
+        logEntries.forEach(entry => {
+            if (entry.trim()) {
+                let [time, ip, location, userAgent, email] = entry.split('\n').map(line => line.trim());
+
+                logHTML += `
+                    <div class="log-entry">
+                        <h3>Attack Attempt</h3>
+                        <p class="time"> ${entry}</p>
+                      
+                        
+                    </div>
+                `;
+            }
+        });
+
+        logHTML += '</body></html>';
+
+        // Send the formatted HTML response
+        res.send(logHTML);
     } catch (error) {
-        logger.error('Error reading logs:', error); // Log the error
+        console.error('Error reading logs:', error); // Log the error
         res.status(500).json({ success: false, message: 'Failed to fetch logs' });
     }
 });
 
-app.get('/admin/attacklogs', isAdmin, (req, res) => {
-    try {
-        // Read logs from the file
-        const logs = fs.readFileSync(path.join(__dirname, 'attackers.log'), 'utf-8');
-        res.json({ success: true, logs });
-    } catch (error) {
-        logger.error('Error reading logs:', error); // Log the error
-        res.status(500).json({ success: false, message: 'Failed to fetch logs' });
-    }
-});
+
 
 
 app.get("/admin", isAdmin, function (req, res) {
@@ -1956,7 +2045,7 @@ app.get("/verifyemail", async function(req, res) {
     const otp = crypto.randomInt(100000, 999999); // Generate a 6-digit OTP
 
     otpStorage[email] = {
-        code: generatedOtp, // e.g. "123456"
+        code: otp, // e.g. "123456"
         expiresAt: Date.now() + 5 * 60 * 1000, // 5 minutes
         attempts: 0, // initial attempt count
         maxAttempts: 5 // limit
@@ -2455,7 +2544,7 @@ app.post("/verifyemail", async (req, res) => {
         }
 
         // Check if OTP matches
-        if (storedOtpData.code !== otp) {
+        if (storedOtpData.code != otp) {
             storedOtpData.attempts += 1;
             return res.status(400).json({
                 error: `Incorrect OTP. ${storedOtpData.maxAttempts - storedOtpData.attempts} attempts left.`,
@@ -2689,104 +2778,104 @@ app.post("/profile/update", isLoggedIn,resetMiddleware,upload.single("profile_pi
 
 // ==============================================================Chat Fucntionality ==================
 
-app.post("/chat-profile", isLoggedIn,function (req, res) {  
-    console.log("Chat Profile Accessed");
-    res.status(200).send("user :"+req.session.user.username + "You are Logged in with Email ID :"+ req.session.user.email);
-});
+// app.post("/chat-profile", isLoggedIn,function (req, res) {  
+//     console.log("Chat Profile Accessed");
+//     res.status(200).send("user :"+req.session.user.username + "You are Logged in with Email ID :"+ req.session.user.email);
+// });
 
 
 
 
 
-app.post("/chat-list-friends", isLoggedIn, async function (req, res) {  
-    try {
-        const currentUser = req.session.user;
+// app.post("/chat-list-friends", isLoggedIn, async function (req, res) {  
+//     try {
+//         const currentUser = req.session.user;
     
-        const friends = await Friendship.find({
-            status: "Accepted",
-            user_id: currentUser._id, // Current user is the recipient
-        }).populate("friend_id_or_follow_id", "username name");  // Only populate username & name
+//         const friends = await Friendship.find({
+//             status: "Accepted",
+//             user_id: currentUser._id, // Current user is the recipient
+//         }).populate("friend_id_or_follow_id", "username name");  // Only populate username & name
     
-        // Extract only username and name
-        const simplifiedFriends = friends.map(friend => ({
-            username: friend.friend_id_or_follow_id.username,
-            name: friend.friend_id_or_follow_id.name
-        }));
+//         // Extract only username and name
+//         const simplifiedFriends = friends.map(friend => ({
+//             username: friend.friend_id_or_follow_id.username,
+//             name: friend.friend_id_or_follow_id.name
+//         }));
     
-        console.log("Chat Profile Accessed");
+//         console.log("Chat Profile Accessed");
     
-        res.status(200).send({ friends: simplifiedFriends }); // Send simplified list
-    } catch (error) {
-        console.error("Error fetching users:", error);
-        res.status(500).send("Internal Server Error");
-    }
-});
+//         res.status(200).send({ friends: simplifiedFriends }); // Send simplified list
+//     } catch (error) {
+//         console.error("Error fetching users:", error);
+//         res.status(500).send("Internal Server Error");
+//     }
+// });
 
-app.post("/chat/send-message", isLoggedIn, async (req, res) => {
-    const { receiver, message, isGroup } = req.body;
+// app.post("/chat/send-message", isLoggedIn, async (req, res) => {
+//     const { receiver, message, isGroup } = req.body;
 
-    if (!message || message.trim() === "") {
-        return res.status(400).send("Message content is required.");
-    }
+//     if (!message || message.trim() === "") {
+//         return res.status(400).send("Message content is required.");
+//     }
 
-    try {
-        const senderId = req.session.user.user_id;
+//     try {
+//         const senderId = req.session.user.user_id;
 
-        let receiverId;
+//         let receiverId;
 
-        if (isGroup) {
-            receiverId = receiver;
-        } else {
-            const receiverUser = await Users.findOne({ username: receiver });
-            if (!receiverUser) {
-                return res.status(404).send("User not found");
-            }
-            receiverId = receiverUser.user_id;
-        }
+//         if (isGroup) {
+//             receiverId = receiver;
+//         } else {
+//             const receiverUser = await Users.findOne({ username: receiver });
+//             if (!receiverUser) {
+//                 return res.status(404).send("User not found");
+//             }
+//             receiverId = receiverUser.user_id;
+//         }
 
-        const newMessage = new Message({
-            sender_id: senderId,
-            receiver_id: receiverId,
-            receiverType: isGroup ? "Group" : "User",
-            message_content: message,
-            created_at: new Date()
-        });
+//         const newMessage = new Message({
+//             sender_id: senderId,
+//             receiver_id: receiverId,
+//             receiverType: isGroup ? "Group" : "User",
+//             message_content: message,
+//             created_at: new Date()
+//         });
 
-        console.log("Sending message:", newMessage);
+//         console.log("Sending message:", newMessage);
 
-        await newMessage.save();
+//         await newMessage.save();
 
-        res.status(200).send({ success: true, message: "Message sent" });
-    } catch (error) {
-        console.error("Error sending message:", error);
-        res.status(500).send("Internal Server Error");
-    }
-});
+//         res.status(200).send({ success: true, message: "Message sent" });
+//     } catch (error) {
+//         console.error("Error sending message:", error);
+//         res.status(500).send("Internal Server Error");
+//     }
+// });
 
 
 
-app.post("/chat/fetch-messages", isLoggedIn, async (req, res) => {
-    const { receiver, isGroup } = req.body;
+// app.post("/chat/fetch-messages", isLoggedIn, async (req, res) => {
+//     const { receiver, isGroup } = req.body;
 
-    try {
-        const userId = req.session.user.user_id;  
-        const receiverType = isGroup ? "Group" : "User";
+//     try {
+//         const userId = req.session.user.user_id;  
+//         const receiverType = isGroup ? "Group" : "User";
 
-        const filter = {
-            receiverType,
-            $or: [
-                { sender_id: userId, receiver_id: receiver },
-                { sender_id: receiver, receiver_id: userId }
-            ]
-        };
+//         const filter = {
+//             receiverType,
+//             $or: [
+//                 { sender_id: userId, receiver_id: receiver },
+//                 { sender_id: receiver, receiver_id: userId }
+//             ]
+//         };
 
-        const messages = await Message.find(filter).sort({ created_at: 1 });
-        res.status(200).send({ messages });
-    } catch (error) {
-        console.error("Error fetching messages:", error);
-        res.status(500).send("Internal Server Error");
-    }
-});
+//         const messages = await Message.find(filter).sort({ created_at: 1 });
+//         res.status(200).send({ messages });
+//     } catch (error) {
+//         console.error("Error fetching messages:", error);
+//         res.status(500).send("Internal Server Error");
+//     }
+// });
 
 
 
